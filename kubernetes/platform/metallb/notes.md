@@ -1,0 +1,3 @@
+- Chosen address pool is 10.99.0.240-10.99.0.250
+- Picked the range because it is not being used
+- Current Rancher external IP 10.99.0.241

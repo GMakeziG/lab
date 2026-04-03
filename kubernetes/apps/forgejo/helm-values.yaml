@@ -1,0 +1,29 @@
+gitea:
+  config:
+    server:
+      DOMAIN: git.ninjatronics.local
+      ROOT_URL: http://git.ninjatronics.local:30080/
+      SSH_DOMAIN: git.ninjatronics.local
+      START_SSH_SERVER: true
+      SSH_PORT: 30222
+
+service:
+  http:
+    type: NodePort
+    nodePort: 30080
+
+  ssh:
+    type: NodePort
+    nodePort: 30222
+
+persistence:
+  enabled: true
+  size: 20Gi
+
+nodeSelector:
+  kubernetes.io/hostname: zion
+
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"

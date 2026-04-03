@@ -1,0 +1,18 @@
+# OS / temp
+*.swp
+*.tmp
+.DS_Store
+
+# kube / secrets
+*.kubeconfig
+kubeconfig
+*.key
+*.crt
+*.pem
+
+# local overrides
+.env
+*.log
+
+# node tokens / sensitive
+node-token

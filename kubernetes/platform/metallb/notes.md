@@ -1,3 +1,29 @@
-- Chosen address pool is 10.99.0.240-10.99.0.250
-- Picked the range because it is not being used
-- Current Rancher external IP 10.99.0.241
+# MetalLB
+
+## Mode
+
+Layer 2
+
+## IP Pool (Example)
+
+
+192.168.X.240-192.168.X.250
+
+
+## Files
+
+- ip-pool.yaml
+- l2-advertisement.yaml
+
+## Requirements
+
+All nodes must allow asymmetric routing:
+
+
+rp_filter = 0
+
+
+## Common Issues
+
+- IP reachable from only one node → speaker not running on all nodes
+- curl works but ping fails → expected behavior

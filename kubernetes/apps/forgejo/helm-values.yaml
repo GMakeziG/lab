@@ -1,9 +1,9 @@
 gitea:
   config:
     server:
-      DOMAIN: git.ninjatronics.local
-      ROOT_URL: http://git.ninjatronics.local:30080/
-      SSH_DOMAIN: git.ninjatronics.local
+      DOMAIN: git.ninjatronics.lab.arpa
+      ROOT_URL: http://git.ninjatronics.lab.arpa:30080/
+      SSH_DOMAIN: git.ninjatronics.lab.arpa
       START_SSH_SERVER: true
       SSH_PORT: 30222
 
@@ -19,6 +19,22 @@ service:
 persistence:
   enabled: true
   size: 20Gi
+
+serviceAccount:
+  create: false
+  name: forgejo
+
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/role: "forgejo-role"
+  vault.hashicorp.com/agent-inject-secret-db: "secret/data/forgejo/db"
+  vault.hashicorp.com/agent-inject-template-db: |
+    {{- with secret "secret/data/forgejo/db" -}}
+    DB_USER={{ .Data.data.username }}
+    DB_PASS={{ .Data.data.password }}
+    DB_HOST={{ .Data.data.host }}
+    DB_NAME={{ .Data.data.database }}
+    {{- end }}
 
 nodeSelector:
   kubernetes.io/hostname: zion

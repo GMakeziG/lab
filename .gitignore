@@ -16,3 +16,8 @@ kubeconfig
 
 # node tokens / sensitive
 node-token
+
+# Kubernetes secret manifests
+kubernetes/apps/**/secret.yaml
+kubernetes/platform/**/secret.yaml
+*.secret.yaml

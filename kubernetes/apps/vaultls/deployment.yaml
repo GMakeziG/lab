@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultls
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultls
+  template:
+    metadata:
+      labels:
+        app: vaultls
+    spec:
+      containers:
+        - name: vaultls
+          image: ghcr.io/7ritn/vaultls:latest
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: VAULTLS_URL
+              value: "https://vaultls.ninjatronics.local/"
+            - name: VAULTLS_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vaultls
+                  key: VAULTLS_API_SECRET
+            - name: VAULTLS_DB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vaultls
+                  key: VAULTLS_DB_SECRET
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vaultls-data

@@ -1,0 +1,37 @@
+# Infisical - Homelab Helm values
+# Keep real secrets out of Git.
+# Generate secrets separately and pass them with --set or a sealed/external secret later.
+
+ingress:
+  enabled: false
+  className: nginx
+  nginx:
+    enabled: false
+  hostName: infisical.lab.arpa
+  tls:
+    enabled: false
+
+postgresql:
+  enabled: true
+  auth:
+    username: infisical
+    database: infisical
+    # TEMP only for first lab test. Replace before keeping long-term.
+    password: "QPgTYKVlYf8iozWCsIKK5neGw0QjOJb6nO81pL+vW6o="
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "THyCxRBijTMSMZMBBE25/Yks4KD4bJ2rOidyng10Dug="
+
+infisical:
+  enabled: true
+
+  # Use HTTP first. We can switch to HTTPS after cert-manager is wired.
+  siteUrl: "http://infisical.lab.arpa"
+
+  # TEMP only. Replace with generated values before real use.
+  jwtSecret: "f3YjeEjy01UJjt/nXOF5ZSC+QhnTrd4/Gtsr/7xHPyY="
+  encryptionKey: "1910f9f654dd16ee5c1748f817f958c00bd8981024f78064aadcbc7fcc73e4fa"

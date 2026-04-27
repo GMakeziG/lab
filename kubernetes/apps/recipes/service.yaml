@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: recipes
+  namespace: apps
+spec:
+  selector:
+    app: recipes
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: gunicorn
+      port: 8080
+      targetPort: gunicorn
+  type: ClusterIP

@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recipes
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: recipes
+  template:
+    metadata:
+      labels:
+        app: recipes
+    spec:
+      serviceAccountName: recipes
+      initContainers:
+        - name: init-recipes
+          image: vabene1111/recipes
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              source venv/bin/activate
+              echo "Updating database"
+              python manage.py migrate
+              python manage.py collectstatic --noinput
+              echo "Setting media file permissions"
+              chown -R 65534:65534 /opt/recipes/mediafiles
+              find /opt/recipes/mediafiles -type d | xargs -r chmod 755
+              find /opt/recipes/mediafiles -type f | xargs -r chmod 644
+              echo "Done"
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recipes
+                  key: secret-key
+            - name: DB_ENGINE
+              value: django.db.backends.postgresql
+            - name: POSTGRES_HOST
+              value: postgresql.platform.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: recipes
+            - name: POSTGRES_DB
+              value: recipes
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipes
+                  key: postgresql-password
+          volumeMounts:
+            - mountPath: /opt/recipes/mediafiles
+              name: media
+              subPath: files
+            - mountPath: /opt/recipes/staticfiles
+              name: static
+              subPath: files
+      containers:
+        - name: recipes-nginx
+          image: nginx:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - mountPath: /media
+              name: media
+              subPath: files
+            - mountPath: /static
+              name: static
+              subPath: files
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx-config
+              readOnly: true
+
+        - name: recipes
+          image: vabene1111/recipes
+          imagePullPolicy: IfNotPresent
+          command:
+            - /opt/recipes/venv/bin/gunicorn
+            - -b
+            - :8080
+            - --access-logfile
+            - "-"
+            - --error-logfile
+            - "-"
+            - --log-level
+            - INFO
+            - recipes.wsgi
+          ports:
+            - containerPort: 8080
+              name: gunicorn
+          env:
+            - name: DEBUG
+              value: "0"
+            - name: ALLOWED_HOSTS
+              value: "*"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recipes
+                  key: secret-key
+            - name: GUNICORN_MEDIA
+              value: "0"
+            - name: DB_ENGINE
+              value: django.db.backends.postgresql
+            - name: POSTGRES_HOST
+              value: postgresql.platform.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: recipes
+            - name: POSTGRES_DB
+              value: recipes
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recipes
+                  key: postgresql-password
+          securityContext:
+            runAsUser: 65534
+          volumeMounts:
+            - mountPath: /opt/recipes/mediafiles
+              name: media
+              subPath: files
+            - mountPath: /opt/recipes/staticfiles
+              name: static
+              subPath: files
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: recipes-media
+        - name: static
+          persistentVolumeClaim:
+            claimName: recipes-static
+        - name: nginx-config
+          configMap:
+            name: recipes-nginx-config

@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: recipes
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: lab-selfsigned  
+spec:
+  tls:
+    - hosts:
+        - recipes.ninjatronics.home.arpa
+      secretName: recipes-tls
+  rules:
+    - host: recipes.ninjatronics.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: recipes
+                port:
+                  number: 8080
+          - path: /media
+            pathType: Prefix
+            backend:
+              service:
+                name: recipes
+                port:
+                  number: 80
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: recipes
+                port:
+                  number: 80

@@ -1,0 +1,28 @@
+server:
+  enabled: true
+
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        address     = "[::]:8200"
+        tls_disable = 1
+      }
+
+      storage "postgresql" {
+        connection_url = "postgresql://openbao:CHANGE_THIS_TO_A_STRONG_PASSWORD@postgresql.platform.svc.cluster.local:5432/openbao?sslmode=disable"
+      }
+
+  dev:
+    enabled: false
+
+  ha:
+    enabled: false
+
+ui:
+  enabled: true
+
+injector:
+  enabled: true

@@ -1,0 +1,29 @@
+architecture: standalone
+
+auth:
+  postgresPassword: "GRamAA&C1B&Zyj#@"
+  username: "recipes"
+  password: "t5g*5%x6neRhP&Yg"
+  database: "recipes"
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  service:
+    type: ClusterIP
+    ports:
+      postgresql: 5432
+
+  persistentVolumeClaimRetentionPolicy:
+    enabled: true
+    whenDeleted: Retain
+    whenScaled: Retain

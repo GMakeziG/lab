@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: openbao-injector-test
+  namespace: apps
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/role: "openbao-test-role"
+    vault.hashicorp.com/agent-inject-secret-lab-test: "secret/data/lab/test"
+    vault.hashicorp.com/agent-inject-template-lab-test: |
+      {{- with secret "secret/data/lab/test" -}}
+      username={{ .Data.data.username }}
+      password={{ .Data.data.password }}
+      {{- end }}
+spec:
+  serviceAccountName: openbao-test
+  containers:
+    - name: test
+      image: busybox:latest
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Checking injected secret..."
+          sleep 3600

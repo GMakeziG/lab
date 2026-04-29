@@ -6,9 +6,3 @@ metadata:
 spec:
   addresses:
     - 10.99.0.240-10.99.0.250
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: default
-  namespace: metallb-system

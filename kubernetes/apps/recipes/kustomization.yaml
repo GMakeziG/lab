@@ -7,3 +7,4 @@ resources:
   - pvc.yaml
   - serviceaccount.yaml
   - service.yaml
+  - external-secrets

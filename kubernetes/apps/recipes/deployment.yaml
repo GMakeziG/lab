@@ -20,28 +20,10 @@ spec:
         - name: init-recipes
           image: vabene1111/recipes
           imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              source venv/bin/activate
-              echo "Updating database"
-              python manage.py migrate
-              python manage.py collectstatic --noinput
-              echo "Setting media file permissions"
-              chown -R 65534:65534 /opt/recipes/mediafiles
-              find /opt/recipes/mediafiles -type d | xargs -r chmod 755
-              find /opt/recipes/mediafiles -type f | xargs -r chmod 644
-              echo "Done"
-          securityContext:
-            runAsUser: 0
+          envFrom:
+            - secretRef:
+                name: recipes-secret
           env:
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: recipes
-                  key: secret-key
             - name: DB_ENGINE
               value: django.db.backends.postgresql
             - name: POSTGRES_HOST
@@ -52,11 +34,6 @@ spec:
               value: recipes
             - name: POSTGRES_DB
               value: recipes
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: recipes
-                  key: postgresql-password
           volumeMounts:
             - mountPath: /opt/recipes/mediafiles
               name: media
@@ -100,16 +77,14 @@ spec:
           ports:
             - containerPort: 8080
               name: gunicorn
+          envFrom:
+            - secretRef:
+                name: recipes-secret
           env:
             - name: DEBUG
               value: "0"
             - name: ALLOWED_HOSTS
               value: "*"
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: recipes
-                  key: secret-key
             - name: GUNICORN_MEDIA
               value: "0"
             - name: DB_ENGINE
@@ -122,11 +97,6 @@ spec:
               value: recipes
             - name: POSTGRES_DB
               value: recipes
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: recipes
-                  key: postgresql-password
           securityContext:
             runAsUser: 65534
           volumeMounts:

@@ -1,35 +1,110 @@
 # k3s Lab
 
-This repository is my DevOps lab source of truth. It contains Kubernetes manifests, Helm values, scripts, and documentation for a Rancher-managed k3s environment.
+This repository is the source of truth for my Kubernetes-based lab environment.  
+It follows a GitOps-driven approach to manage infrastructure, applications, and observability in a Rancher-managed k3s cluster.
+
+---
 
 ## Purpose
 
-Build, break, troubleshoot, and automate real-world infrastructure using Kubernetes and cloud-native tooling.
+- Build and validate real-world infrastructure patterns
+- Practice GitOps workflows and automation
+- Deploy and operate containerized applications
+- Troubleshoot networking, storage, and cluster behavior
+- Serve as a reproducible DevOps learning platform
 
-## Stack
+---
+
+## Core Stack
 
 - Kubernetes (k3s)
-- Rancher
-- MetalLB (Layer 2 LoadBalancer)
-- Traefik (Ingress)
-- Observability stack (Grafana, Loki, Promtail)
-- Self-hosted Git service
+- Rancher (cluster management)
+- MetalLB (Layer 2 load balancing)
+- Traefik (Ingress controller)
+- Observability:
+  - Grafana
+  - Loki
+  - Promtail
+- Self-hosted Git service (primary + mirror)
 
-## Architecture (High Level)
+---
+
+## Architecture
 
 - 1 control-plane node
 - Multiple worker nodes
-- Layer 2 load balancing for service exposure
-- Ingress-based routing for applications
+- Layer 2 load balancing via MetalLB
+- Ingress routing via Traefik
+- GitOps reconciliation via Flux
+
+---
+
+## GitOps Workflow
+
+1. Changes are committed to this repository
+2. Flux reconciles cluster state with Git
+3. Kubernetes resources are applied automatically
+4. Drift is detected and corrected
+
+
+Git → Flux → Cluster
+
+
+---
 
 ## Repository Layout
 
-- `docs/` → design, networking, troubleshooting
-- `kubernetes/` → manifests and configs
-- `scripts/` → bootstrap and validation
+```bash
+.
+├── docs/              # Architecture, networking, troubleshooting
+├── kubernetes/
+│   ├── apps/          # Application deployments
+│   ├── observability/ # Monitoring stack
+│   ├── platform/      # Core infrastructure components
+│   └── namespaces/    # Namespace definitions
+├── scripts/           # Bootstrap and validation scripts
+└── README.md
+```
+---
+## Getting Started
+### Prerequisites
+- kubectl
+- Helm
+- Access to the cluster
+- Git
 
-## Security Notes
+```bash
+### Basic Commands
+# Check cluster state
+kubectl get nodes
 
+# View Flux status
+flux get kustomizations
+
+# Inspect workloads
+kubectl get pods -A
+```
+---
+## Security
 - No secrets are stored in this repository
-- All sensitive values are replaced with placeholders
-- Real environment configuration is maintained outside this repo
+- Secrets are managed externally (e.g., external secret provider)
+- Placeholder values are used for all sensitive configs
+- Access is controlled via cluster RBAC
+---
+## Design Principles
+- Git is the single source of truth
+- Declarative over imperative
+- Minimal manual changes in-cluster
+- Reproducibility over convenience
+- Observability built-in, not added later
+---
+## Roadmap
+- External secrets integration
+- Certificate automation
+- Storage improvements
+- CI validation for manifests
+- Multi-environment structure (dev / prod split)
+---
+## Notes
+This lab is intentionally designed to be broken and rebuilt.
+Every failure is part of the learning process.

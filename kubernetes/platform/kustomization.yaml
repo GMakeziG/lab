@@ -4,3 +4,4 @@ resources:
   - metallb
   - adguard-home
   - traefik
+  - external-secrets

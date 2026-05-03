@@ -17,7 +17,16 @@ spec:
     env:
       - name: TZ
         value: America/Los_Angeles
-
+      - name: LD_SUPERUSER_NAME
+        valueFrom:
+          secretKeyRef:
+            name: linkding-secret
+            key: LD_SUPERUSER_NAME
+      - name: LD_SUPERUSER_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: linkding-secret
+            key: LD_SUPERUSER_PASSWORD
     persistentVolumeClaim:
       create: true
       size: 1Gi

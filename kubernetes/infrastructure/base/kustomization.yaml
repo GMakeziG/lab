@@ -7,4 +7,3 @@ resources:
   - metallb
   - openbao
   - traefik
-  - external-secrets-stores

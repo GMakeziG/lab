@@ -24,7 +24,7 @@ spec:
       enabled: true
       type: LoadBalancer
       spec:
-        loadBalancerIP: 10.99.0.241
+        loadBalancerIP: 10.99.0.242
 
     ports:
       web:

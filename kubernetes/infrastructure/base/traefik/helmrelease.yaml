@@ -4,6 +4,12 @@ metadata:
   name: traefik
   namespace: kube-system
 spec:
+  install:
+    disableWait: true
+    timeout: 2m
+  upgrade:
+    disableWait: true
+    timeout: 2m
   interval: 10m
   chart:
     spec:

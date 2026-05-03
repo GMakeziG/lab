@@ -7,3 +7,4 @@ resources:
   - infrastructure.yaml
   - apps.yaml
   - observability.yaml
+  - staging-apps.yaml

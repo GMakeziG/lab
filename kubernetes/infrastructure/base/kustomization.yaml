@@ -8,3 +8,4 @@ resources:
   - openbao
   - traefik
   - external-secrets-stores
+  - cert-manager

@@ -5,6 +5,9 @@ metadata:
   namespace: apps
 spec:
   interval: 15m
+  dependsOn:
+    - name: linkding-secret
+      namespace: apps
   chart:
     spec:
       chart: linkding
@@ -16,7 +19,7 @@ spec:
   values:
     env:
       - name: TZ
-        value: America/Los_Angeles
+        value: America/Los_Angeles # Correct for Ridgecrest, CA
       - name: LD_SUPERUSER_NAME
         valueFrom:
           secretKeyRef:
@@ -30,13 +33,15 @@ spec:
     persistentVolumeClaim:
       create: true
       size: 1Gi
-
     service:
       type: ClusterIP
-
     resources:
       requests:
         cpu: 50m
         memory: 128Mi
       limits:
         memory: 512Mi
+    # Security hardening
+    securityContext:
+      runAsNonRoot: true
+      fsGroup: 1000

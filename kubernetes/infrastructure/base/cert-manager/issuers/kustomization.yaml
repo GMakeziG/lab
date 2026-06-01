@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - lab-selfsigned.yaml
   - letsencrypt-staging-cloudflare.yaml
+  - letsencrypt-production-cloudflare.yaml

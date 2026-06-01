@@ -41,4 +41,3 @@ spec:
     # Security hardening
     securityContext:
       runAsNonRoot: true
-      fsGroup: 1000

@@ -1,24 +1,50 @@
-# OS / temp
+# OS & Editor files
 *.swp
 *.tmp
 .DS_Store
+.vscode/
+.idea/
 
-# kube / secrets
-*.kubeconfig
-kubeconfig
+# Secrets & Credentials
+**/.env
+**/.env*
 *.key
 *.crt
 *.pem
-
-# local overrides
-.env
-*.log
-
-# node tokens / sensitive
+*.pfx
+**/*token*
+**/*password*
+**/*apikey*
+**/*api-key*
 node-token
 
-# Kubernetes secret manifests
-kubernetes/apps/**/secret.yaml
-kubernetes/platform/**/secret.yaml
-*.secret.yaml
+# Kubernetes Secrets
+**/*secret*.yaml
+**/secret.yaml
+**/secrets.yaml
+kubernetes/**/secret*
+*.kubeconfig
+kubeconfig
+
+# Certificates & TLS
+**/*.crt
+**/*.key
+**/*.pem
+
+# Logs & Temporary
+*.log
+*.Log
+**/*.log
+
+# Claude / AI Tools
+.claude/
 .claude/sessions/
+skills-lock.json
+
+# Local overrides / caches
+**/*.local.yaml
+**/*override*.yaml
+
+# Helm caches
+**/Chart.lock
+**/charts/*.tgz

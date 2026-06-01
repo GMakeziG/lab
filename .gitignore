@@ -21,3 +21,4 @@ node-token
 kubernetes/apps/**/secret.yaml
 kubernetes/platform/**/secret.yaml
 *.secret.yaml
+.claude/sessions/

@@ -5,9 +5,6 @@ metadata:
   namespace: apps
 spec:
   interval: 15m
-  dependsOn:
-    - name: linkding-secret
-      namespace: apps
   chart:
     spec:
       chart: linkding

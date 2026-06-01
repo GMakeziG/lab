@@ -39,5 +39,3 @@ spec:
       limits:
         memory: 512Mi
     # Security hardening
-    securityContext:
-      runAsNonRoot: true

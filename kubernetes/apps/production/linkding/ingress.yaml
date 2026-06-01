@@ -5,7 +5,7 @@ metadata:
   namespace: apps
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    cert-manager.io/cluster-issuer: letsencrypt-staging-cloudflare
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
 spec:
   tls:
     - hosts:

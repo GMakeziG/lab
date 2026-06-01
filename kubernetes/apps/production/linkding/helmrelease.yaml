@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: linkding
+  namespace: apps
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: linkding
+      sourceRef:
+        kind: HelmRepository
+        name: pascaliske
+        namespace: flux-system
+      interval: 1h
+  values:
+    env:
+      - name: TZ
+        value: America/Los_Angeles
+      - name: LD_SUPERUSER_NAME
+        valueFrom:
+          secretKeyRef:
+            name: linkding-secret
+            key: LD_SUPERUSER_NAME
+      - name: LD_SUPERUSER_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: linkding-secret
+            key: LD_SUPERUSER_PASSWORD
+    persistentVolumeClaim:
+      create: true
+      size: 1Gi
+
+    service:
+      type: ClusterIP
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-qr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mini-qr
+  template:
+    metadata:
+      labels:
+        app: mini-qr
+    spec:
+      containers:
+        - name: mini-qr
+          image: ghcr.io/lyqht/mini-qr:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080

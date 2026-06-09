@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mini-qr
+  namespace: mini-qr
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - qr.ninjatronics.io
+      secretName: mini-qr-tls
+  rules:
+    - host: qr.ninjatronics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mini-qr
+                port:
+                  number: 80

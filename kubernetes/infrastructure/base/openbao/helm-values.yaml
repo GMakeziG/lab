@@ -1,18 +1,29 @@
 server:
   enabled: true
 
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    mountPath: /openbao/data
+    accessMode: ReadWriteOnce
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
   standalone:
     enabled: true
     config: |
       ui = true
 
       listener "tcp" {
-        address     = "[::]:8200"
-        tls_disable = 1
+        address         = "[::]:8200"
+        cluster_address = "[::]:8201"
+        tls_disable     = 1
       }
 
-      storage "postgresql" {
-        connection_url = "postgresql://openbao:CHANGE_THIS_TO_A_STRONG_PASSWORD@postgresql.platform.svc.cluster.local:5432/openbao?sslmode=disable"
+      storage "file" {
+        path = "/openbao/data"
       }
 
   dev:

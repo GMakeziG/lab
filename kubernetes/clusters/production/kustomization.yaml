@@ -8,4 +8,3 @@ resources:
   - infrastructure.yaml
   - apps.yaml
   - observability.yaml
-  - staging-cluster.yaml

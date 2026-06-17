@@ -1,13 +1,13 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: infrastructure
+  name: controllers
   namespace: flux-system
 spec:
   dependsOn:
-    - name: controllers
+    - name: namespaces
   interval: 10m
-  path: ./kubernetes/infrastructure/production
+  path: ./kubernetes/infrastructure/controllers
   prune: true
   sourceRef:
     kind: GitRepository

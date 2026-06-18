@@ -2,27 +2,16 @@
 
 ## Symptoms
 
-- Cloudflare 522: connection timed out
 - Cloudflare 521: web server is down
-- Kubernetes resources look healthy
-- Internal tests directly to Traefik work
+- Cloudflare 522: connection timed out
+- Kubernetes workloads appear healthy
+- Internal tests to the ingress controller succeed
 
 ## Working Configuration
 
-- Public TCP 80 -> `10.99.0.5:31094`
-- Public TCP 443 -> `10.99.0.5:30533`
-- Do not forward directly to MetalLB VIP `10.99.0.242`
-
-## Current Known Values
-
-- `zion`: `10.99.0.5`
-- Traefik LoadBalancer VIP: `10.99.0.242`
-- Traefik NodePorts:
-  - HTTP: `31094`
-  - HTTPS: `30533`
-- Apps:
-  - `qr.ninjatronics.io`
-  - `linkding.ninjatronics.io`
+- Public TCP 80 -> Kubernetes ingress NodePort
+- Public TCP 443 -> Kubernetes ingress NodePort
+- Avoid forwarding directly to MetalLB VIPs when using certain consumer routers
 
 ## Verification Commands
 
@@ -34,23 +23,24 @@ kubectl get ingress -A
 kubectl get pod -n kube-system -o wide | grep traefik
 kubectl get svc -n kube-system traefik
 kubectl logs -n kube-system deploy/traefik --tail=200
-
-curl -vk --resolve qr.ninjatronics.io:443:10.99.0.242 https://qr.ninjatronics.io
-curl -vk --resolve linkding.ninjatronics.io:443:10.99.0.242 https://linkding.ninjatronics.io
 ```
+
+Test through the expected public hostname after updating router and DNS settings.
 
 ## Root Cause
 
-Synology SRM may not reliably forward WAN traffic to the MetalLB floating VIP
-`10.99.0.242`. Forwarding WAN traffic to Traefik's NodePorts on `zion` fixed
-the issue.
+The router failed to reliably forward WAN traffic to the MetalLB virtual IP.
+
+## Resolution
+
+Forward traffic to the ingress controller NodePorts instead of the MetalLB VIP.
 
 ## Recovery Steps
 
-1. Confirm Cloudflare DNS points to the current WAN IP.
-2. Confirm the Traefik service NodePorts.
-3. Update Synology SRM port forwards:
-   - Public TCP 80 -> `10.99.0.5:31094`
-   - Public TCP 443 -> `10.99.0.5:30533`
-4. Test from a cellular network.
+1. Confirm public DNS points to the current WAN IP.
+2. Confirm the ingress controller service NodePorts.
+3. Update router port forwards:
+   - Public TCP 80 -> Kubernetes ingress NodePort
+   - Public TCP 443 -> Kubernetes ingress NodePort
+4. Test from an external network.
 5. Confirm Cloudflare no longer shows 521 or 522.

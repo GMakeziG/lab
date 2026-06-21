@@ -4,6 +4,7 @@ resources:
   - apps.yaml
   - cert-manager.yaml
   - eso-namespace.yaml
+  - excalidraw.yaml
   - metallb-system.yaml
   - observability.yaml
   - platform.yaml

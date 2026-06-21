@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: excalidraw
+  namespace: excalidraw
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - draw.ninjatronics.io
+      secretName: excalidraw-ninjatronics-io-tls
+  rules:
+    - host: draw.ninjatronics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: excalidraw
+                port:
+                  number: 80

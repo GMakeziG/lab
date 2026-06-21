@@ -43,10 +43,3 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            privileged: false
-            readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL

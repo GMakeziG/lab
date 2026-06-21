@@ -13,7 +13,6 @@ spec:
         app: excalidraw
     spec:
       securityContext:
-        fsNonRoot: true
         runAsNonRoot: true
         runAsUser: 1000
       containers:

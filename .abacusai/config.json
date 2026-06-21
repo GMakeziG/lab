@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidraw *)"
+    ]
+  }
+}

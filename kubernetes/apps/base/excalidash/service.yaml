@@ -22,6 +22,6 @@ spec:
     app: excalidash-frontend
   ports:
     - name: http
-      port: 6767
-      targetPort: 6767
+      port: 80
+      targetPort: 80
       protocol: TCP

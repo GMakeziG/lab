@@ -18,7 +18,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 6767
+              containerPort: 80
               protocol: TCP
           env:
             - name: BACKEND_URL

@@ -21,7 +21,7 @@ spec:
               service:
                 name: excalidash-frontend
                 port:
-                  number: 6767
+                  number: 80
           - path: /api
             pathType: Prefix
             backend:

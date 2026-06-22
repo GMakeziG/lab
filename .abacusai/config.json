@@ -15,7 +15,10 @@
       "Bash(kill *)",
       "Bash(git push *)",
       "Bash(kubectl delete pods *)",
-      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)"
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
+      "Bash(kubectl port-forward *)",
+      "Bash(curl *)"
     ]
   }
 }

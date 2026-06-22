@@ -11,8 +11,9 @@ resources:
 secretGenerator:
   - name: excalidash-backend-secrets
     namespace: excalidash-test
-    envs:
-      - secrets.env
+    literals:
+      - JWT_SECRET=PLACEHOLDER_JWT_SECRET_CHANGE_ME
+      - CSRF_SECRET=PLACEHOLDER_CSRF_SECRET_CHANGE_ME
     options:
       disableNameSuffixHash: true
 

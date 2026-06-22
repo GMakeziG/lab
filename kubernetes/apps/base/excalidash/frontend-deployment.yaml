@@ -22,7 +22,7 @@ spec:
               protocol: TCP
           env:
             - name: BACKEND_URL
-              value: "http://excalidash-backend.excalidash-test.svc.cluster.local:8000"
+              value: "excalidash-backend.excalidash-test.svc.cluster.local:8000"
           livenessProbe:
             httpGet:
               path: /
@@ -46,4 +46,5 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+
 

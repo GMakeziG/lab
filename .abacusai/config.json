@@ -12,7 +12,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(kill *)"
+      "Bash(kill *)",
+      "Bash(git push *)",
+      "Bash(kubectl delete pods *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)"
     ]
   }
 }

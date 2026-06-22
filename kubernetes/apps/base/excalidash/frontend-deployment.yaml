@@ -23,22 +23,6 @@ spec:
           env:
             - name: BACKEND_URL
               value: "excalidash-backend.excalidash-test.svc.cluster.local:8000"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
@@ -46,5 +30,6 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+
 
 

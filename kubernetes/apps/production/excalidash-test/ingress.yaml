@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: excalidash-test
+  namespace: excalidash-test
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - draw-test.ninjatronics.io
+      secretName: excalidash-test-ninjatronics-io-tls
+  rules:
+    - host: draw-test.ninjatronics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: excalidash-frontend
+                port:
+                  number: 6767
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: excalidash-backend
+                port:
+                  number: 8000

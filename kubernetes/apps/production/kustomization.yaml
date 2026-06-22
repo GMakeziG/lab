@@ -3,5 +3,6 @@ kind: Kustomization
 
 resources:
   - excalidraw
+  - excalidash-test
   - linkding
   - mini-qr

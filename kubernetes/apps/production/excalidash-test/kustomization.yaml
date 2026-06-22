@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: excalidash-test
+
+resources:
+  - namespace.yaml
+  - ../../base/excalidash
+  - ingress.yaml
+
+secretGenerator:
+  - name: excalidash-backend-secrets
+    namespace: excalidash-test
+    envs:
+      - secrets.env
+    options:
+      disableNameSuffixHash: true
+
+patchesStrategicMerge:
+  - |-
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: excalidash-backend-config
+    data:
+      FRONTEND_URL: "https://draw-test.ninjatronics.io"

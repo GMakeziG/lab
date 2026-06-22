@@ -1,50 +1,198 @@
-# OS & Editor files
-*.swp
-*.tmp
+# ============================================================
+
+# Ninjatronics Homelab Git Ignore
+
+# ============================================================
+
+# ------------------------------------------------------------
+
+# Operating System & Editor Files
+
+# ------------------------------------------------------------
+
 .DS_Store
+Thumbs.db
+
+*.swp
+*.swo
+*~
+
 .vscode/
 .idea/
 
-# Secrets & Credentials
+# ------------------------------------------------------------
+
+# Environment Files
+
+# ------------------------------------------------------------
+
 **/.env
-**/.env*
-*.key
-*.crt
-*.pem
-*.pfx
-**/*token*
-**/*password*
-**/*apikey*
-**/*api-key*
-node-token
+**/.env.*
+!.env.example
+!.env.sample
 
-# Kubernetes Secrets
-**/*secret*.yaml
-**/secret.yaml
-**/secrets.yaml
-kubernetes/**/secret*
-*.kubeconfig
-kubeconfig
+# ------------------------------------------------------------
 
-# Certificates & TLS
-**/*.crt
-**/*.key
-**/*.pem
+# Logs
 
-# Logs & Temporary
+# ------------------------------------------------------------
+
 *.log
 *.Log
 **/*.log
 
-# Claude / AI Tools
-.claude/
-.claude/sessions/
-skills-lock.json
+# ------------------------------------------------------------
 
-# Local overrides / caches
+# Secrets & Credentials
+
+# ------------------------------------------------------------
+
+# Raw secret files
+
+*.secret
+*.secrets
+
+# Authentication tokens
+
+**/*token*
+node-token
+
+# Password/API key exports
+
+**/*password*
+**/*apikey*
+**/*api-key*
+
+# OpenBao / Vault token files
+
+.bao-token
+.vault-token
+
+# ------------------------------------------------------------
+
+# Certificates & Keys
+
+# ------------------------------------------------------------
+
+*.key
+*.crt
+*.pem
+*.pfx
+*.p12
+*.csr
+
+# ------------------------------------------------------------
+
+# Kubernetes / Kubeconfig
+
+# ------------------------------------------------------------
+
+*.kubeconfig
+kubeconfig
+
+# Ignore ONLY actual raw secret manifests
+
+**/secret.yaml
+**/secrets.yaml
+
+# Ignore example encrypted/temporary secret files
+
+**/secret.example.yaml
+**/secrets.example.yaml
+
+# Ignore directories that contain local secrets
+
+kubernetes/**/secret/
+
+# Explicitly allow External Secrets resources
+
+!**/externalsecret*.yaml
+!**/clustersecretstore*.yaml
+!**/secretstore*.yaml
+
+# ------------------------------------------------------------
+
+# SOPS / Sealed Secrets
+
+# ------------------------------------------------------------
+
+*.dec
+sealed-secrets-key*.yaml
+
+# ------------------------------------------------------------
+
+# Local Overrides & Developer Customizations
+
+# ------------------------------------------------------------
+
 **/*.local.yaml
 **/*override*.yaml
 
-# Helm caches
+# ------------------------------------------------------------
+
+# Helm
+
+# ------------------------------------------------------------
+
 **/Chart.lock
 **/charts/*.tgz
+
+# ------------------------------------------------------------
+
+# AI Tooling
+
+# ------------------------------------------------------------
+
+.claude/
+.claude/sessions/
+
+# ------------------------------------------------------------
+
+# Temporary Files
+
+# ------------------------------------------------------------
+
+*.tmp
+*.bak
+*.orig
+
+# ------------------------------------------------------------
+
+# Terraform
+
+# ------------------------------------------------------------
+
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+
+# ------------------------------------------------------------
+
+# Python
+
+# ------------------------------------------------------------
+
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# ------------------------------------------------------------
+
+# Node.js
+
+# ------------------------------------------------------------
+
+node_modules/
+
+# ------------------------------------------------------------
+
+# Misc
+
+# ------------------------------------------------------------
+
+skills-lock.json
+

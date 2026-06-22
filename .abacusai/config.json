@@ -8,7 +8,11 @@
       "Bash(git commit *)",
       "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
       "Bash(kubectl apply *)",
-      "Bash(flux *)"
+      "Bash(flux *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(kill *)"
     ]
   }
 }

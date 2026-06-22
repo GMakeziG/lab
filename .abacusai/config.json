@@ -18,7 +18,16 @@
       "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
       "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
       "Bash(kubectl port-forward *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
+      "Bash(kubectl run *)",
+      "Bash(kubectl delete pod *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
+      "Bash(kubectl kustomize kubernetes/apps/production/excalidash-test *)",
+      "Bash(git commit *)",
+      "Bash(kubectl exec *)",
+      "Bash(kubectl rollout restart *)",
+      "Bash(git push *)"
     ]
   }
 }

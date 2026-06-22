@@ -17,6 +17,27 @@ Rebuild the entire cluster from scratch using Git as the source of truth.
 
 ---
 
+## Step 0: Node OS prep (RHEL / Rocky nodes only)
+
+RHEL-family nodes run `firewalld`, which blocks the flannel VXLAN overlay and
+breaks cross-node pod networking. Configure this BEFORE installing k3s (see
+`docs/networking.md` for details):
+
+```bash
+sudo firewall-cmd --permanent --add-port=8472/udp
+sudo firewall-cmd --permanent --add-port=10250/tcp
+sudo firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16
+sudo firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16
+sudo firewall-cmd --reload
+printf 'net.ipv4.conf.all.rp_filter=0\nnet.ipv4.conf.default.rp_filter=0\n' \
+  | sudo tee /etc/sysctl.d/90-k3s-rp-filter.conf
+sudo sysctl --system
+```
+
+Debian/Ubuntu nodes ship with no host firewall and need no action here.
+
+---
+
 ## Step 1: Install k3s
 
 ```bash

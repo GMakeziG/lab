@@ -50,6 +50,35 @@ Check:
 
 ---
 
+## Cross-node 504 / VIP unreachable (firewalld on RHEL nodes)
+
+Symptoms:
+
+- Traefik returns `504` only when the backend pod runs on a specific node
+- A LoadBalancer VIP is unreachable from the LAN (but `curl` works when routed
+  through a different node)
+- The underlay works (you can `ping` the node IP) but pod-to-pod across that
+  node fails
+
+Cause: `firewalld` (default-on for RHEL/Rocky) drops the flannel VXLAN overlay
+(UDP 8472) before k3s's iptables rules apply, isolating that node's pods.
+
+Diagnose (underlay OK, overlay broken = firewall):
+
+```bash
+# from another node, pod-to-pod across the suspect node fails but node IP pings
+kubectl get pods -A -o wide        # find a pod on the suspect node
+ping <suspect-pod-ip>              # FAIL
+ping <suspect-node-ip>             # OK
+# on the suspect node:
+sudo firewall-cmd --query-port=8472/udp   # -> no
+```
+
+Fix: apply the firewalld config in `docs/networking.md` (open 8472/udp, trust
+pod/service CIDRs, kubelet 10250/tcp) and `firewall-cmd --reload`.
+
+---
+
 ## Quick test
 
 

@@ -17,3 +17,4 @@ patchesStrategicMerge:
       name: excalidash-backend-config
     data:
       FRONTEND_URL: "https://draw-test.ninjatronics.io"
+      DISABLE_ONBOARDING_GATE: "true"

@@ -20,4 +20,3 @@ spec:
       remoteRef:
         key: secret/excalidash/test
         property: CSRF_SECRET
-

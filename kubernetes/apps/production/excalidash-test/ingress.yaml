@@ -5,6 +5,7 @@ metadata:
   namespace: excalidash-test
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+    traefik.ingress.kubernetes.io/router.middlewares: excalidash-test-strip-api@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -15,13 +16,6 @@ spec:
     - host: draw-test.ninjatronics.io
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: excalidash-frontend
-                port:
-                  number: 80
           - path: /api
             pathType: Prefix
             backend:
@@ -29,3 +23,20 @@ spec:
                 name: excalidash-backend
                 port:
                   number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: excalidash-frontend
+                port:
+                  number: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api
+  namespace: excalidash-test
+spec:
+  stripPrefix:
+    prefixes:
+      - /api

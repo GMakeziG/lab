@@ -1,4 +1,7 @@
-# Excalidraw Deployment
+# Excalidraw Deployment (ARCHIVED)
+
+> **Retired 2026-07-06.** Replaced by ExcaliDash at `draw.ninjatronics.io` — see
+> `kubernetes/apps/production/excalidash/`. Kept here for reference only; not reconciled by Flux.
 
 Self-hosted virtual whiteboard for sketching hand-drawn style diagrams on your personal domain.
 

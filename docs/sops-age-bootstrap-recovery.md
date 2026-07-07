@@ -62,48 +62,46 @@ etc. stay in plaintext so the file is still readable/reviewable in a PR diff.
 
 ## Where the age private key lives
 
-The private key is **never committed to Git**. It exists in exactly two
-places:
+This repository uses a single, permanent age key
+(public key `age130mgpv4sdrfu7p7lg7sx4jh7u805w6w3lzsazlckf3pgdzfyuyssgmpjml`,
+pinned in `.sops.yaml`). The private key is **never committed to Git**. It
+exists in exactly two places:
 
-1. **In-cluster**, as a Kubernetes Secret so Flux can decrypt:
+1. **Locally**, at the standard SOPS age key location:
+   `~/.config/sops/age/keys.txt`. `sops` reads this path automatically, so no
+   `SOPS_AGE_KEY_FILE` export is needed on this machine.
+
+2. **In-cluster**, as a Kubernetes Secret so Flux can decrypt:
 
    ```bash
    kubectl create secret generic sops-age \
      --namespace flux-system \
-     --from-file=age.agekey=/path/to/private-key.agekey
+     --from-file=age.agekey=~/.config/sops/age/keys.txt
    ```
 
    Flux's `kustomize-controller` reads this secret (referenced by
    `secretRef.name: sops-age`) to decrypt any Kustomization that declares
    `decryption.provider: sops`.
 
-2. **Offline backup, outside Git** — e.g. a password manager entry, an
+3. **Offline backup, outside Git** — e.g. a password manager entry, an
    encrypted USB drive, or a printed paper backup stored securely. This is
-   the recovery path if the cluster (and therefore the in-cluster copy) is
-   lost entirely. Without this backup, any secret encrypted with this age
-   key becomes permanently unrecoverable if the cluster is rebuilt from
-   scratch.
+   the recovery path if both the local copy and the in-cluster copy are
+   lost. Without this backup, any secret encrypted with this age key becomes
+   permanently unrecoverable if the machine and cluster are both rebuilt
+   from scratch.
 
 The corresponding **public key** (the age "recipient") is not sensitive and
 is committed in `.sops.yaml`.
 
+Do not generate a new keypair for this repository — `~/.config/sops/age/keys.txt`
+holds the one permanent key. Only rotate it deliberately (see below).
+
 ## Day-to-day usage
 
-Generate a keypair (only needed once, or when rotating):
+Create/edit an encrypted secret (no key export needed — `sops` finds
+`~/.config/sops/age/keys.txt` by default):
 
 ```bash
-export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
-age-keygen -o sops-age-bootstrap.agekey   # keep this file OUT of the repo
-```
-
-Put the resulting `Public key: age1...` value into `.sops.yaml` under
-`creation_rules[].age`.
-
-Create/edit an encrypted secret:
-
-```bash
-export SOPS_AGE_KEY_FILE=/path/to/sops-age-bootstrap.agekey
-
 # create a new plaintext Secret manifest under kubernetes/bootstrap-secrets/,
 # then encrypt in place:
 sops --encrypt --in-place kubernetes/bootstrap-secrets/my-secret.enc.yaml
@@ -114,6 +112,20 @@ sops kubernetes/bootstrap-secrets/my-secret.enc.yaml
 
 Add the new file to `kubernetes/bootstrap-secrets/kustomization.yaml`
 `resources:` list. Commit — only the encrypted file is committed.
+
+### Rotating the key
+
+If the permanent key ever needs to be rotated (suspected compromise, etc.):
+
+```bash
+age-keygen -o /path/outside/repo/new-key.agekey   # keep OUT of the repo
+```
+
+Update the `age:` recipient in `.sops.yaml` to the new public key, then
+re-encrypt every file under `kubernetes/bootstrap-secrets/` with
+`sops updatekeys <file>` (run once per file, with both old and new keys
+available locally), replace `~/.config/sops/age/keys.txt` with the new key,
+and recreate the `sops-age` secret in `flux-system`.
 
 ## Recovery procedure (cluster rebuild)
 

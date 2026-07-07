@@ -10,4 +10,4 @@
 creation_rules:
   - path_regex: kubernetes/bootstrap-secrets/.*\.yaml$
     encrypted_regex: ^(data|stringData)$
-    age: age14yzv9a6xwyjykehtwqza0etlj6w65mrr03x3lcd7a66l22lzzazqjjtt3a
+    age: age130mgpv4sdrfu7p7lg7sx4jh7u805w6w3lzsazlckf3pgdzfyuyssgmpjml

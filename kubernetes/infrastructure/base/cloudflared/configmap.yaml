@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: platform
+data:
+  config.yaml: |
+    tunnel: 381367a6-bdca-44e3-b78e-285166692048
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    ingress:
+      - hostname: draw-test.ninjatronics.io
+        service: https://traefik.kube-system.svc.cluster.local:443
+        originRequest:
+          noTLSVerify: true
+      - service: http_status:404

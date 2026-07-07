@@ -8,3 +8,4 @@ resources:
   - traefik
   - external-secrets-stores
   - cert-manager
+  - cloudflared

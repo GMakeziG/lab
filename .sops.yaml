@@ -1,0 +1,13 @@
+# SOPS configuration for bootstrap/emergency-recovery secrets ONLY.
+#
+# Normal app/runtime secrets are NOT managed here — they live in OpenBao
+# and are synced via External Secrets Operator (ClusterSecretStore "openbao").
+# This config exists solely to encrypt the small set of secrets Flux needs
+# before OpenBao/ESO are up (bootstrap) or reachable (recovery).
+#
+# See docs/sops-age-bootstrap-recovery.md for the full workflow.
+
+creation_rules:
+  - path_regex: kubernetes/bootstrap-secrets/.*\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age14yzv9a6xwyjykehtwqza0etlj6w65mrr03x3lcd7a66l22lzzazqjjtt3a

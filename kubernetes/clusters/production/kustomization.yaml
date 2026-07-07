@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - flux-system
   - namespaces.yaml
+  - bootstrap-secrets.yaml
   - controllers.yaml
   - infrastructure.yaml
   - apps.yaml

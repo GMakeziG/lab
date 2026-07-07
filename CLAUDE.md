@@ -16,6 +16,57 @@ Nodes: `zion` (control plane), `samson` and `niner` (workers).
 - Explain risky changes before applying them
 - No secrets, tokens, real credentials, kubeconfigs, or private infrastructure data may be committed
 
+## Homelab Rules
+
+- This repository is GitOps-managed with Flux.
+- Never apply manifests directly with `kubectl` unless explicitly requested.
+- Prefer editing manifests in Git and letting Flux reconcile.
+- Never store plaintext secrets in Git.
+- Use SOPS with age encryption for all secrets.
+- Existing External Secrets backed by OpenBao should remain in use unless migrating intentionally.
+- Always preserve Flux directory structure.
+- Validate manifests with `kubectl kustomize` before committing.
+
+## Editor
+
+Use vim for all terminal editing. Do not use nano unless explicitly requested.
+
+## Local Tooling PATH
+
+Tools are installed via Linuxbrew, not standalone binaries. Before running shell commands, use this PATH:
+
+```bash
+export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
+```
+
+Required tools expected on PATH:
+
+- `brew`
+- `kubectl`
+- `flux`
+- `sops`
+- `age`
+- `cloudflared`
+- `gh`
+- `pnpm`
+
+Before assuming a tool is missing, run:
+
+```bash
+export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
+which brew kubectl flux sops age cloudflared gh pnpm
+
+kubectl version --client
+flux --version
+sops --version
+age --version
+cloudflared --version
+gh --version
+pnpm --version
+```
+
+Do not download standalone binaries unless the user confirms. Use `brew` to install missing tools.
+
 ## Key Operational Commands
 
 ```bash
@@ -106,3 +157,19 @@ When adding secrets for a new app:
 ## Networking
 
 MetalLB pool: `10.99.0.0/24`. All `LoadBalancer` services get IPs from this range. Traefik handles ingress routing. Applications are accessed via hostname matching local DNS or `/etc/hosts`.
+
+## Cloudflare Tunnel
+
+All public applications are exposed through Cloudflare Tunnel.
+
+When adding a new application:
+
+1. Add an ingress rule to `cloudflared-config`.
+2. Create the DNS Tunnel record in Cloudflare.
+3. Ensure the Kubernetes Ingress hostname matches.
+4. Commit changes.
+5. Allow Flux to reconcile.
+6. Verify with:
+   ```bash
+   curl -I https://hostname
+   ```

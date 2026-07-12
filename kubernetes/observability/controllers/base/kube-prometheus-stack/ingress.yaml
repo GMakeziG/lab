@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-prometheus-stack-grafana
+  namespace: observability
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - grafana.ninjatronics.io
+      secretName: grafana-ninjatronics-io-tls
+  rules:
+    - host: grafana.ninjatronics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80

@@ -8,4 +8,5 @@ resources:
   - controllers.yaml
   - infrastructure.yaml
   - apps.yaml
-  - observability.yaml
+  - observability-controllers.yaml
+  - observability-configs.yaml

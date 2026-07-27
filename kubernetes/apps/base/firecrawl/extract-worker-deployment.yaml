@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-extract-worker
+  labels:
+    app: firecrawl-extract-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firecrawl-extract-worker
+  template:
+    metadata:
+      labels:
+        app: firecrawl-extract-worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: extract-worker
+          image: ghcr.io/firecrawl/firecrawl:2.11.137@sha256:d2fe554a1a723d95f3af3ceb4146db5765efaba7fb1b1850f8fd2713b11da7f6
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--max-old-space-size=3072", "dist/src/services/extract-worker.js"]
+          ports:
+            - containerPort: 3004
+          env:
+            - name: FLY_PROCESS_GROUP
+              value: "extract-worker"
+            - name: NUQ_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: firecrawl-config
+            - secretRef:
+                name: firecrawl-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3

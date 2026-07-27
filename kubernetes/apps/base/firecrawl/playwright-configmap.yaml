@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: firecrawl-playwright-config
+data:
+  PORT: "3000"
+  ALLOW_LOCAL_WEBHOOKS: "false"
+  BLOCK_MEDIA: "false"
+  MAX_CONCURRENT_PAGES: "10"

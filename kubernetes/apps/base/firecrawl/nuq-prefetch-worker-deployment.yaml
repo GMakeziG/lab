@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-nuq-prefetch-worker
+  labels:
+    app: firecrawl-nuq-prefetch-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firecrawl-nuq-prefetch-worker
+  template:
+    metadata:
+      labels:
+        app: firecrawl-nuq-prefetch-worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nuq-prefetch-worker
+          image: ghcr.io/firecrawl/firecrawl:2.11.137@sha256:d2fe554a1a723d95f3af3ceb4146db5765efaba7fb1b1850f8fd2713b11da7f6
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--max-old-space-size=2048", "dist/src/services/worker/nuq-prefetch-worker.js"]
+          ports:
+            - containerPort: 3011
+          env:
+            - name: FLY_PROCESS_GROUP
+              value: "nuq-prefetch-worker"
+            - name: NUQ_PREFETCH_REPLICAS
+              value: "1"
+            - name: NUQ_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: firecrawl-config
+            - secretRef:
+                name: firecrawl-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "250m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3011
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3011
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3

@@ -5,6 +5,7 @@ resources:
   - cert-manager.yaml
   - eso-namespace.yaml
   - excalidash-test.yaml
+  - firecrawl.yaml
   - metallb-system.yaml
   - observability.yaml
   - platform.yaml

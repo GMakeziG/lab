@@ -1,0 +1,45 @@
+# Explicitly, deterministically applies the upstream nuq schema/cron-job SQL
+# that ships baked into the nuq-postgres image at
+# /docker-entrypoint-initdb.d/010-nuq.sql (apps/nuq-postgres/nuq.sql upstream).
+#
+# This does not copy or retype that SQL anywhere — it runs the exact file
+# already present in the image (same pinned digest as the nuq-postgres
+# Deployment), so there is no risk of transcription drift from upstream.
+#
+# nuq.sql is idempotent (CREATE ... IF NOT EXISTS / DO-block duplicate_object
+# guards / pg_cron's named-job upsert semantics for cron.schedule), so this
+# Job is safe to re-run any number of times against an already-initialized
+# database — it exists as a version-controlled guarantee independent of the
+# image's own first-boot-only docker-entrypoint-initdb.d hook.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: firecrawl-nuq-postgres-init
+  annotations:
+    # Job specs are immutable; let Flux delete+recreate on future edits.
+    kustomize.toolkit.fluxcd.io/force: "true"
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: nuq-postgres-init
+          image: ghcr.io/firecrawl/nuq-postgres:linux-amd64@sha256:4ca6718b2cef40404b046db5cd37ae45db3e44d1a5750c80522f3587a5b193d5
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: firecrawl-config
+            - secretRef:
+                name: firecrawl-secret
+          command:
+            - "sh"
+            - "-c"
+            - |
+              set -eu
+              until pg_isready -h firecrawl-nuq-postgres -p 5432 -U "$POSTGRES_USER"; do
+                echo "waiting for firecrawl-nuq-postgres..."
+                sleep 3
+              done
+              exec psql "$NUQ_DATABASE_URL" -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/010-nuq.sql

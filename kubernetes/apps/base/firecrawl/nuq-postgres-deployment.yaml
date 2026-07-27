@@ -53,7 +53,7 @@ spec:
               memory: "1Gi"
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "firecrawl"]
+              command: ["pg_isready", "-U", "postgres"]
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
@@ -61,7 +61,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "firecrawl"]
+              command: ["pg_isready", "-U", "postgres"]
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5

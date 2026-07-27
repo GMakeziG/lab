@@ -19,5 +19,10 @@ data:
   FIRECRAWL_APP_HOST: "firecrawl-api"
   FIRECRAWL_APP_PORT: "3002"
   PLAYWRIGHT_MICROSERVICE_URL: "http://firecrawl-playwright:3000/scrape"
-  POSTGRES_USER: "firecrawl"
-  POSTGRES_DB: "firecrawl"
+  # Must be "postgres": the ghcr.io/firecrawl/nuq-postgres image hardcodes
+  # cron.database_name = 'postgres' in postgresql.conf.sample at build time
+  # (see apps/nuq-postgres/Dockerfile upstream). pg_cron only allows
+  # CREATE EXTENSION in the database matching cron.database_name, so nuq.sql's
+  # init fails silently-past-initdb if POSTGRES_DB is anything else.
+  POSTGRES_USER: "postgres"
+  POSTGRES_DB: "postgres"

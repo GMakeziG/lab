@@ -19,3 +19,4 @@ resources:
   - nuq-postgres-pvc.yaml
   - nuq-postgres-deployment.yaml
   - nuq-postgres-service.yaml
+  - nuq-postgres-init-job.yaml

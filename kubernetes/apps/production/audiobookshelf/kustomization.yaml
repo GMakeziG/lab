@@ -5,3 +5,4 @@ namespace: apps
 
 resources:
   - ../../base/audiobookshelf
+  - ingress.yaml

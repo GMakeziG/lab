@@ -15,7 +15,34 @@
 
 ## Traffic Flow
 
+Internal / LAN path:
+
 Client → LoadBalancer IP → Ingress Controller → Service → Pod
+
+Public path (Cloudflare Tunnel — how every published hostname is actually
+reached):
+
+```
+Client (Internet)
+  ↓  HTTPS to <app>.ninjatronics.io (Cloudflare edge, proxied DNS)
+Cloudflare Tunnel  homelab-k3s / 381367a6-bdca-44e3-b78e-285166692048
+  ↓  (cloudflared Deployment, namespace platform)
+Traefik  https://traefik.kube-system.svc.cluster.local:443  (noTLSVerify)
+  ↓  Ingress route (websecure), TLS via cert-manager ClusterIssuer
+      letsencrypt-production-cloudflare
+ClusterIP Service  →  Pod
+```
+
+- A **single shared tunnel** fronts all public hostnames (`draw`, `linkding`,
+  `qr`, `grafana`, `audiobookshelf`). Hostnames are declared in
+  `kubernetes/infrastructure/base/cloudflared/configmap.yaml`; the terminal
+  `- service: http_status:404` rule must stay last.
+- The tunnel credential (`cloudflared-tunnel-credentials`, namespace `platform`)
+  is GitOps-managed via SOPS/age under `kubernetes/bootstrap-secrets/` (see
+  `docs/sops-age-bootstrap-recovery.md`). It is a **shared-fate** secret — a bad
+  value breaks every hostname on the tunnel.
+- TLS is terminated **per host** by Traefik + cert-manager, so sharing the tunnel
+  does not weaken per-app certificates.
 
 ## Design Goals
 
@@ -230,6 +257,7 @@ Includes:
 
 - recipes
 - forgejo
+- audiobookshelf (see below)
 - future workloads
 
 Principles:
@@ -237,6 +265,44 @@ Principles:
 - Apps depend on platform
 - Apps consume secrets via External Secrets
 - No app-specific infra in platform layer
+
+#### Application inventory
+
+| App            | Namespace | Base                                    | Overlay (production)                          | Public hostname                  |
+| -------------- | --------- | --------------------------------------- | --------------------------------------------- | -------------------------------- |
+| linkding       | apps      | —                                       | —                                             | linkding.ninjatronics.io         |
+| audiobookshelf | apps      | `kubernetes/apps/base/audiobookshelf`   | `kubernetes/apps/production/audiobookshelf`   | audiobookshelf.ninjatronics.io   |
+
+#### Audiobookshelf
+
+Self-hosted audiobook/podcast server, onboarded via the base → production
+overlay pattern (plain manifests, no Helm).
+
+- **Namespace:** `apps` (shared with linkding).
+- **Base** (`kubernetes/apps/base/audiobookshelf/`): ConfigMap
+  `audiobookshelf-config`, four PVCs, Deployment, ClusterIP Service.
+- **Overlay** (`kubernetes/apps/production/audiobookshelf/`): sets
+  `namespace: apps`, layers base + the Traefik Ingress.
+- **Image:** `ghcr.io/advplyr/audiobookshelf:2.36.0` pinned by digest.
+- **Port:** container binds `:3005` because the ConfigMap sets `PORT=3005`
+  (image default is `80`); the ConfigMap is consumed via `envFrom` — this is the
+  real config mechanism. Service `:3005` → `targetPort http`.
+- **Storage:** four `local-path` (RWO) PVCs — `/config` (2Gi), `/metadata`
+  (10Gi), `/audiobooks` (100Gi), `/podcasts` (50Gi). Single replica + `Recreate`
+  strategy (RWO-safe). Note: `local-path` PVs are `reclaimPolicy: Delete`, so
+  pruning a PVC deletes its data.
+- **Security:** runs non-root — `runAsNonRoot: true`, UID/GID `1000`,
+  `fsGroup: 1000`, `seccompProfile: RuntimeDefault`,
+  `allowPrivilegeEscalation: false`, all capabilities dropped.
+- **Ingress/TLS:** `audiobookshelf.ninjatronics.io`, `ingressClassName: traefik`,
+  `websecure`, cert-manager `letsencrypt-production-cloudflare`, TLS secret
+  `audiobookshelf-ninjatronics-io-tls`; reached over the shared Cloudflare tunnel
+  (see [Traffic Flow](#traffic-flow)).
+- **Health:** `GET /ping` → `200 {"success":true}` (readiness + liveness).
+- **Docs:** [validation runbook](runbooks/audiobookshelf-validation.md),
+  [ADR 0001](decisions/0001-audiobookshelf-plain-manifests-shared-tunnel-sops-adoption.md),
+  base [README](../kubernetes/apps/base/audiobookshelf/README.md). Security
+  review **PH6-SEN-001 — PASS**.
 
 ---
 

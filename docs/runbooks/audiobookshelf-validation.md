@@ -199,23 +199,44 @@ See the ADR:
   in [Upgrade / rollback](#upgrade--rollback) above. Do not `git revert` the PVCs
   or the tunnel secret against a live cluster without backing up first.
 
-## Remaining manual gates (not yet done — environment-blocked)
+## Pre-cutover state
 
-1. **Flux source is `main`.** The `flux-system` GitRepository tracks branch
-   `main`; `feat/audiobookshelf` will not reconcile until it is **merged to
-   `main`** or an **approved temporary source repoint** is applied (Gerso's
-   decision). Live reconcile is blocked until then.
-2. **Cloudflare DNS does not resolve yet.** `audiobookshelf.ninjatronics.io` must
-   be created as a proxied CNAME to
-   `381367a6-bdca-44e3-b78e-285166692048.cfargotunnel.com`:
+Current status of the external and process gates (updated as they are satisfied):
+
+1. **Cloudflare DNS — PRESENT.** `audiobookshelf.ninjatronics.io` now resolves
+   through Cloudflare (proxied). Verify:
    ```bash
-   cloudflared tunnel route dns homelab-k3s audiobookshelf.ninjatronics.io
+   dig +short audiobookshelf.ninjatronics.io A      # Cloudflare edge IPs
+   dig +short audiobookshelf.ninjatronics.io AAAA   # Cloudflare edge IPs
    ```
-   Run from a host holding the tunnel owner cert (`~/.cloudflared/cert.pem`) or
-   add the CNAME in the Cloudflare dashboard. No CF token was available in the
-   implementation environment.
-3. **Draft PR not opened.** `gh` was not authenticated in the implementation
-   environment; the PR for `feat/audiobookshelf` still needs to be created.
+   No further DNS action is required.
+2. **Draft PR — CREATED.** PR
+   [#6](https://github.com/GMakeziG/lab/pull/6) (`feat/audiobookshelf` → `main`)
+   exists as an open **draft**. It is not yet marked Ready for review.
+3. **Not deployed yet — expected.** The `flux-system` GitRepository tracks branch
+   `main`, and PR #6 has **not been merged**. Until the merge lands on `main` and
+   Flux reconciles, none of the Audiobookshelf resources exist in the cluster.
+4. **Pre-reconcile HTTPS `404` — expected.** `https://audiobookshelf.ninjatronics.io`
+   returns `404` from Cloudflare/Traefik because Traefik does not yet have the
+   Audiobookshelf `Ingress` (it is only created once the PR merges to `main` and
+   Flux reconciles). A `404` at this stage is normal and not a fault.
+
+### Remaining pre-cutover requirements
+
+In order:
+
+1. **PR approval** — human review + approval of PR #6.
+2. **Merge** — merge `feat/audiobookshelf` into `main`.
+3. **Flux reconciliation** — Flux picks up the new `main` revision and applies the
+   `apps` Kustomization (see [Reconcile & verify](#reconcile--verify) above).
+4. **Certificate validation** — cert-manager issues
+   `audiobookshelf-ninjatronics-io-tls` via `letsencrypt-production-cloudflare`;
+   confirm the `Certificate` is `Ready=True`.
+5. **Workload validation** — pod ready, non-root UID/GID, PVCs `Bound`, writable
+   `/config`, `/ping` probes green, external HTTPS returns `200`/`302`.
+6. **Immediate administrator claim** — claim the first-run ABS admin account the
+   moment the service is reachable (see first-run note below), or gate the host
+   behind temporary Traefik auth until it is claimed.
 
 ## Known limitations (LOW hardening — accepted, non-blocking)
 

@@ -9,3 +9,4 @@ resources:
   - metallb-system.yaml
   - observability.yaml
   - platform.yaml
+  - renovate.yaml

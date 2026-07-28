@@ -1,0 +1,82 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: renovate
+  namespace: renovate
+spec:
+  interval: 10m
+  timeout: 10m
+  # Conservative remediation (deviates from this repo's other controller
+  # HelmReleases, which don't set these): a CronJob workload can fail an
+  # install/upgrade for transient reasons (image pull, PVC binding) without
+  # anything being wrong with the release itself, so retry before requiring
+  # manual intervention.
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: renovate
+      # Pinned intentionally (deviates from this repo's usual unpinned
+      # HelmRelease convention) so Renovate's own chart upgrades go through
+      # a reviewable PR instead of tracking latest implicitly.
+      version: "46.248.2"
+      sourceRef:
+        kind: HelmRepository
+        name: renovate
+        namespace: flux-system
+      interval: 1h
+  values:
+    cronjob:
+      schedule: "0 4 * * *"
+      # Low-traffic homelab window with explicit DST-aware zone; the chart
+      # renders this as CronJob.spec.timeZone (k8s >= 1.27).
+      timeZone: "America/Los_Angeles"
+      concurrencyPolicy: Forbid
+
+    # existingSecret injects every key of renovate-secret (see
+    # externalsecret.yaml) as container env vars via envFrom. It currently
+    # contains only RENOVATE_TOKEN, which Renovate reads automatically as
+    # the self-hosted GitHub platform token.
+    existingSecret: renovate-secret
+
+    renovate:
+      configIsJson5: true
+      # Self-hosted / runtime configuration only. Repository-specific policy
+      # (grouping, PR limits, ignore paths, manager file patterns) lives in
+      # the target repo's committed renovate.json instead — see
+      # https://docs.renovatebot.com/self-hosted-configuration/
+      config: |
+        {
+          platform: "github",
+          autodiscover: false,
+          repositories: ["GMakeziG/lab"],
+          // renovate.json is committed directly to the target repo, so skip
+          // the onboarding PR that proposes adding one.
+          onboarding: false,
+          // renovate.json is committed at the repo root, so require it to
+          // be present rather than silently falling back to defaults.
+          // "required" is also this Renovate version's own default.
+          requireConfig: "required",
+          logLevel: "info",
+        }
+
+      persistence:
+        cache:
+          enabled: true
+          storageSize: "1Gi"
+          # SQLite package-cache backend (RENOVATE_X_SQLITE_PACKAGE_CACHE) is
+          # intentionally not enabled yet; start with the plain persistent
+          # file cache and revisit once it's verified stable for the pinned
+          # chart/Renovate version.
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi

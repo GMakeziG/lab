@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "ignorePaths": ["**/_archived/**"],
+  "flux": {
+    "managerFilePatterns": [
+      "/(^|/)helmrelease\\.ya?ml$/",
+      "/(^|/)helmrepository\\.ya?ml$/",
+      "/(^|/)gotk-components\\.ya?ml$/"
+    ]
+  },
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^kubernetes\\/(?!.*\\/gotk-components\\.ya?ml$)(?!.*\\/chart-default-values\\.ya?ml$).*\\.ya?ml$/"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Group Flux system component (gotk) minor/patch updates; keep majors separate",
+      "matchFileNames": ["**/gotk-components.yaml"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Flux system components (minor/patch)"
+    },
+    {
+      "description": "Group Helm chart minor/patch version bumps (Flux HelmRelease); keep majors separate",
+      "matchFileNames": ["**/helmrelease.yaml"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Helm chart updates (minor/patch)"
+    },
+    {
+      "description": "Group container image tag minor/patch updates; keep majors separate",
+      "matchManagers": ["kubernetes", "dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Container image updates (minor/patch)"
+    },
+    {
+      "description": "Group GitHub Actions minor/patch updates; keep majors separate",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions updates (minor/patch)"
+    },
+    {
+      "description": "Group Terraform provider/module minor/patch updates; keep majors separate",
+      "matchManagers": ["terraform"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Terraform updates (minor/patch)"
+    }
+  ]
+}

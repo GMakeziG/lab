@@ -62,7 +62,6 @@ spec:
           // be present rather than silently falling back to defaults.
           // "required" is also this Renovate version's own default.
           requireConfig: "required",
-          logLevel: "info",
         }
 
       persistence:

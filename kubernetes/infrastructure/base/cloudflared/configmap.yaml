@@ -33,4 +33,9 @@ data:
         originRequest:
           noTLSVerify: true
 
+      - hostname: audiobookshelf.ninjatronics.io
+        service: https://traefik.kube-system.svc.cluster.local:443
+        originRequest:
+          noTLSVerify: true
+
       - service: http_status:404

@@ -302,7 +302,8 @@ overlay pattern (plain manifests, no Helm).
 - **Docs:** [validation runbook](runbooks/audiobookshelf-validation.md),
   [ADR 0001](decisions/0001-audiobookshelf-plain-manifests-shared-tunnel-sops-adoption.md),
   base [README](../kubernetes/apps/base/audiobookshelf/README.md). Security
-  review **PH6-SEN-001 — PASS**.
+  review **LAB-ABS-SEN-001 — PASS WITH NOTES** (0 BLOCKER, 0 HIGH; MEDIUM/LOW
+  notes).
 
 ---
 

@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-28
 - **Deciders:** Gerso Robayo-Guillen (owner/operator); implementation + review under Phase 6 (PH6)
-- **Security review:** PH6-SEN-001 — verdict **PASS** (0 BLOCKER, 0 HIGH; 3 MEDIUM residual/operational risks)
+- **Security review:** LAB-ABS-SEN-001 — verdict **PASS WITH NOTES** (0 BLOCKER, 0 HIGH; 3 MEDIUM + LOW residual/operational notes)
 
 This ADR records three coupled decisions taken while onboarding
 [Audiobookshelf](https://github.com/advplyr/audiobookshelf) (ABS) onto the
@@ -140,23 +140,26 @@ tunnel reproducible from Git on a clean bootstrap.
 
 ---
 
-## Risks (residual — from PH6-SEN-001)
+## Risks (residual — from LAB-ABS-SEN-001)
 
 These are the accepted MEDIUM residual/operational risks. They are tracked in
 full, with the exact validation gates, in the
-[validation runbook](../runbooks/audiobookshelf-validation.md#sentinel-ph6-sen-001-residual-risks--manual-gates).
+[validation runbook](../runbooks/audiobookshelf-validation.md).
 
 - **M-1 — Unproven write access (local-path + fsGroup:1000).** Running ABS
   non-root (UID/GID 1000) against `local-path` PVCs with `fsGroup: 1000` is
   architecturally sound but **unproven until a pod actually runs**. *Gate:* after
   Flux reconciles, confirm the pod is `Ready` and `/config` is writable
   (persistence test).
-- **M-2 — Shared-tunnel credential parity.** The SOPS ciphertext could not be
-  decrypted locally to prove byte-parity with the live credential. On reconcile
-  Flux overwrites the live secret; a wrong re-encryption would break **every**
-  tunnel hostname (`draw`, `linkding`, `qr`, `grafana`), not just ABS. *Gate:*
-  confirm the ciphertext was derived from the exact live `credentials.json`
-  **before merge**; after merge verify existing hostnames still resolve.
+- **M-2 — Shared-tunnel credential parity.** Byte-parity between the committed
+  SOPS ciphertext and the live credential was **independently verified** by
+  normalized SHA-256 comparison (base64-decoded, key-sorted `credentials.json`):
+  the committed and live hashes **MATCH**, confirming the branch adopts — rather
+  than rotates — the shared tunnel identity. On reconcile Flux overwrites the
+  live secret; because the payload is identical this is a no-op, but a future
+  wrong re-encryption would break **every** tunnel hostname (`draw`, `linkding`,
+  `qr`, `grafana`), not just ABS. *Gate:* re-confirm the hash MATCH **before
+  merge**; after merge verify existing hostnames still resolve.
 - **M-3 — Data-destructive rollback + shared-secret prune.** Rollback is
   manifest-clean via `git revert`, but the PVCs use `reclaimPolicy: Delete` and
   the overlay is `prune: true`, so a naive revert **deletes audiobook/podcast/
@@ -175,7 +178,8 @@ full, with the exact validation gates, in the
 
 ## Security and compliance impact
 
-Reviewed under **PH6-SEN-001 — verdict PASS** (0 BLOCKER, 0 HIGH). The design
+Reviewed under **LAB-ABS-SEN-001 — verdict PASS WITH NOTES** (0 BLOCKER, 0 HIGH;
+MEDIUM/LOW notes). The design
 runs ABS non-root with a hardened `securityContext` (`runAsNonRoot`, UID/GID
 1000, `fsGroup: 1000`, `seccompProfile: RuntimeDefault`,
 `allowPrivilegeEscalation: false`, all capabilities dropped), keeps TLS

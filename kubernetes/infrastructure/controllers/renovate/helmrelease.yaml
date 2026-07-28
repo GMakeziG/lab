@@ -67,8 +67,7 @@ spec:
 
       persistence:
         cache:
-          enabled: true
-          storageSize: "1Gi"
+          enabled: false
           # SQLite package-cache backend (RENOVATE_X_SQLITE_PACKAGE_CACHE) is
           # intentionally not enabled yet; start with the plain persistent
           # file cache and revisit once it's verified stable for the pinned

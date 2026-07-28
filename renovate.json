@@ -15,7 +15,9 @@
   },
   "kubernetes": {
     "managerFilePatterns": [
-      "/^kubernetes\\/(?!.*\\/gotk-components\\.ya?ml$)(?!.*\\/chart-default-values\\.ya?ml$).*\\.ya?ml$/"
+      "/^kubernetes\\/.*\\.ya?ml$/",
+      "!/gotk-components\\.ya?ml$/",
+      "!/chart-default-values\\.ya?ml$/"
     ]
   },
   "packageRules": [

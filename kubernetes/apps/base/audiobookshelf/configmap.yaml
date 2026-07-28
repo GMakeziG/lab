@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audiobookshelf-config
+data:
+  # Audiobookshelf listens on the port given by the PORT env var (image default 80).
+  # Setting it here makes the container actually bind :3005 — verified via image inspection
+  # (ENV PORT=80) and a local run that logged "Listening on port :3005".
+  PORT: "3005"
+  TZ: America/Los_Angeles
+  # Data path env vars are baked into the image (CONFIG_PATH=/config, METADATA_PATH=/metadata);
+  # declared here to make the contract explicit and match the mounted volume paths.
+  CONFIG_PATH: /config
+  METADATA_PATH: /metadata

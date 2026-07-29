@@ -24,7 +24,7 @@ spec:
       # Pinned intentionally (deviates from this repo's usual unpinned
       # HelmRelease convention) so Renovate's own chart upgrades go through
       # a reviewable PR instead of tracking latest implicitly.
-      version: "46.248.2"
+      version: "46.251.0"
       sourceRef:
         kind: HelmRepository
         name: renovate

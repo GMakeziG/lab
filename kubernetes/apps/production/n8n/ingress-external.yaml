@@ -1,18 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: n8n
+  name: n8n-external
   namespace: n8n
   annotations:
-    cert-manager.io/cluster-issuer: lab-selfsigned
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
 spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - n8n.ninjatronics.home.arpa
-      secretName: n8n-home-arpa-tls
+        - n8n.ninjatronics.io
+      secretName: n8n-ninjatronics-io-tls
   rules:
-    - host: n8n.ninjatronics.home.arpa
+    - host: n8n.ninjatronics.io
       http:
         paths:
           - path: /

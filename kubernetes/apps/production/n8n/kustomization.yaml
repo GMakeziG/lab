@@ -6,4 +6,5 @@ namespace: n8n
 resources:
   - ../../base/n8n
   - ingress.yaml
+  - ingress-external.yaml
   - external-secrets

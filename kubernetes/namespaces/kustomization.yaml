@@ -7,6 +7,7 @@ resources:
   - excalidash-test.yaml
   - firecrawl.yaml
   - metallb-system.yaml
+  - n8n.yaml
   - observability.yaml
   - platform.yaml
   - renovate.yaml

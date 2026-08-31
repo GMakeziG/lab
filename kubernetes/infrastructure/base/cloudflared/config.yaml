@@ -1,0 +1,44 @@
+tunnel: 381367a6-bdca-44e3-b78e-285166692048
+credentials-file: /etc/cloudflared/creds/credentials.json
+ingress:
+  - hostname: draw.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: draw-test.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: linkding.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: qr.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: grafana.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: audiobookshelf.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: n8n.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: git.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
+  - service: http_status:404

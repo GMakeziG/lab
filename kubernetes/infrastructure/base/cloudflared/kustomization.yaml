@@ -1,5 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
+namespace: platform
+
 resources:
-  - configmap.yaml
   - deployment.yaml
+
+# The tunnel config is generated (not a static ConfigMap) so that Kustomize
+# appends a content hash to the ConfigMap name. Editing config.yaml changes the
+# generated name, which changes the Deployment pod template, which makes Flux
+# roll the cloudflared pod automatically. cloudflared does not hot-reload a
+# mounted config file, so this is what makes config changes take effect.
+configMapGenerator:
+  - name: cloudflared-config
+    files:
+      - config.yaml

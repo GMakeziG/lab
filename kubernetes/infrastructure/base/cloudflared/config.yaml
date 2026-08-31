@@ -41,4 +41,9 @@ ingress:
     originRequest:
       noTLSVerify: true
 
+  - hostname: wallabag.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
   - service: http_status:404

@@ -5,6 +5,7 @@ resources:
   - audiobookshelf
   - excalidash
   - firecrawl
+  - forgejo
   - linkding
   - mini-qr
   - n8n

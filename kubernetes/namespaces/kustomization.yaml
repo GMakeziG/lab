@@ -6,6 +6,7 @@ resources:
   - eso-namespace.yaml
   - excalidash-test.yaml
   - firecrawl.yaml
+  - forgejo.yaml
   - metallb-system.yaml
   - n8n.yaml
   - observability.yaml

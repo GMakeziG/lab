@@ -1,0 +1,178 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo
+spec:
+  interval: 15m
+
+  chart:
+    spec:
+      chart: forgejo
+      # Chart 17.1.5 ships appVersion 15.0.7. Forgejo v15.0 is the current LTS
+      # (released 2026-04-16, EOL 2027-07-15). v11.0 LTS went EOL 2026-07-16
+      # and v16.0 is not an LTS line.
+      version: 17.1.5
+      sourceRef:
+        kind: HelmRepository
+        name: forgejo
+      interval: 1h
+
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    image:
+      registry: code.forgejo.org
+      repository: forgejo/forgejo
+      # Pinned explicitly rather than inheriting the chart appVersion, so a
+      # chart bump cannot silently move us off the LTS line.
+      tag: "15.0.7"
+      rootless: true
+      pullPolicy: IfNotPresent
+
+    replicaCount: 1
+
+    strategy:
+      type: Recreate
+
+    # local-path PVs are node-local; pin so the volume location is
+    # deterministic instead of left to scheduler discretion. Must match the
+    # node affinity on the PostgreSQL Deployment.
+    nodeSelector:
+      kubernetes.io/hostname: niner
+
+    podSecurityContext:
+      fsGroup: 1000
+
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      privileged: false
+      capabilities:
+        drop:
+          - ALL
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+
+    service:
+      http:
+        type: ClusterIP
+        port: 3000
+      # SSH is not exposed yet. The chart renders this Service
+      # unconditionally, but the server below never starts a listener.
+      ssh:
+        type: ClusterIP
+        port: 22
+
+    # Ingress is hand-written in the production overlay so it matches the
+    # cert-manager / Traefik conventions used by the rest of this repo.
+    ingress:
+      enabled: false
+
+    persistence:
+      enabled: true
+      create: true
+      mount: true
+      claimName: forgejo-data
+      size: 20Gi
+      accessModes:
+        - ReadWriteOnce
+      storageClass: local-path
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+
+    gitea:
+      admin:
+        existingSecret: forgejo-admin-secret
+        email: gerso@mishermanospequenitos.org
+        # Do not reset the admin password on every pod restart; the value in
+        # OpenBao seeds the account and further changes are made in the UI.
+        passwordMode: initialOnlyNoReset
+
+      # The chart does not manage these; Forgejo generates them on first boot
+      # into app.ini on the PVC. Seeding them from OpenBao makes the instance
+      # reproducible: losing SECRET_KEY would make 2FA secrets, OAuth tokens
+      # and mirror passwords already in the database undecryptable.
+      # These envs are honoured only when app.ini does not yet exist.
+      additionalConfigFromEnvs:
+        - name: FORGEJO__DATABASE__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: FORGEJO__SECURITY__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-security-secret
+              key: SECRET_KEY
+        - name: FORGEJO__SECURITY__INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-security-secret
+              key: INTERNAL_TOKEN
+        - name: FORGEJO__OAUTH2__JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-security-secret
+              key: JWT_SECRET
+        - name: FORGEJO__SERVER__LFS_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-security-secret
+              key: LFS_JWT_SECRET
+
+      config:
+        APP_NAME: "Forgejo"
+        RUN_MODE: prod
+
+        server:
+          # TLS terminates at Traefik, so Forgejo itself speaks plain HTTP.
+          PROTOCOL: http
+          HTTP_PORT: 3000
+          DOMAIN: git.ninjatronics.io
+          ROOT_URL: https://git.ninjatronics.io/
+          SSH_DOMAIN: git.ninjatronics.io
+          # HTTPS Git operations only for now. No public SSH listener.
+          START_SSH_SERVER: false
+          DISABLE_SSH: true
+          LANDING_PAGE: login
+          OFFLINE_MODE: true
+
+        database:
+          DB_TYPE: postgres
+          HOST: forgejo-postgres:5432
+          NAME: forgejo
+          USER: forgejo
+          # In-cluster traffic between two pods in the same namespace.
+          SSL_MODE: disable
+
+        service:
+          DISABLE_REGISTRATION: true
+          ALLOW_ONLY_EXTERNAL_REGISTRATION: false
+          ENABLE_CAPTCHA: false
+          DEFAULT_KEEP_EMAIL_PRIVATE: true
+
+        security:
+          INSTALL_LOCK: true
+          # One trusted hop: Traefik. cloudflared sits in front of Traefik, so
+          # client IPs in the log will read as the cloudflared pod IP. That is
+          # deliberate -- raising this would let a caller spoof X-Forwarded-For.
+          REVERSE_PROXY_LIMIT: 1
+          REVERSE_PROXY_TRUSTED_PROXIES: 10.42.0.0/16
+
+        session:
+          COOKIE_SECURE: true
+
+        openid:
+          ENABLE_OPENID_SIGNIN: false
+          ENABLE_OPENID_SIGNUP: false

@@ -1,0 +1,12 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: forgejo
+spec:
+  # Forgejo publishes its chart as an OCI artifact only; there is no classic
+  # index.yaml repository. Deliberately not placed in flux-system (unlike the
+  # other app sources in this repo) so that the overlay's `namespace:`
+  # transformer cannot desync it from the HelmRelease sourceRef.
+  type: oci
+  interval: 1h
+  url: oci://code.forgejo.org/forgejo-helm

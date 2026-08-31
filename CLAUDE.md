@@ -129,10 +129,21 @@ CRDs from infrastructure must be ready before apps can reference them. Never add
 
 Apps follow a base/overlay Kustomize pattern:
 
-- `kubernetes/apps/base/<app>/` — HelmRelease, HelmRepository source, base kustomization
-- `kubernetes/apps/staging/<app>/` — Overlay that includes the base, adds namespace, ExternalSecret, and Ingress patches
+- `kubernetes/apps/base/<app>/` — reusable application resources such as HelmRelease, HelmRepository, Deployment, Service, PVC, ConfigMap, and supporting manifests as appropriate
+- `kubernetes/apps/staging/<app>/` — staging overlay that references the base and adds environment-specific resources such as ExternalSecret and Ingress
+- `kubernetes/apps/production/<app>/` — production overlay that references the base and adds environment-specific resources such as ExternalSecret and Ingress
 
-When adding a new app, create the base first, then the overlay. Reference the base with a relative path (`../../base/<app>`).
+When adding a new application:
+
+1. Inspect existing applications before choosing an implementation pattern.
+2. Create reusable resources under `kubernetes/apps/base/<app>/`.
+3. Create the required environment overlay under `kubernetes/apps/<environment>/<app>/`.
+4. Reference the base using the repository's existing relative-path convention.
+5. Add the application to the appropriate environment-level `kustomization.yaml`.
+6. Validate the application base, environment overlay, environment application layer, and cluster entrypoint with `kubectl kustomize`.
+7. Do not assume every application requires Helm; follow the application's supported deployment model and existing repository conventions.
+
+Production applications must use `kubernetes/apps/production/<app>/`. Do not place production-only resources in the staging overlay.
 
 ## Secrets Architecture
 
@@ -173,3 +184,118 @@ When adding a new application:
    ```bash
    curl -I https://hostname
    ```
+## Nova Second Brain Documentation
+
+Zion hosts Nova's canonical Second Brain vault at:
+
+`/home/gerso/Development/ninjatronics-ai/vault`
+
+The vault is synchronized through Obsidian Sync for consumption by other Obsidian clients.
+
+After completing and verifying meaningful homelab work, record durable operational knowledge from the work in the canonical vault.
+
+Before modifying the vault:
+
+1. Read `/home/gerso/Development/ninjatronics-ai/vault/AGENTS.md`.
+2. Follow the organization and documentation rules defined there.
+3. Inspect existing notes before creating new ones.
+4. Update existing system, project, runbook, or reference notes when they already cover the subject.
+5. Do not duplicate information unnecessarily.
+
+Use the appropriate vault locations:
+
+- `2_Systems/` — current architecture, application, host, and system state
+- `3_Projects/` — project-specific work, milestones, and decisions
+- `4_Runbooks/` — repeatable operational and troubleshooting procedures
+- `5_References/` — reusable technical concepts, patterns, and implementation knowledge
+- `6_Daily/YYYY-MM-DD.md` — chronological record of meaningful work performed that day
+
+### Daily notes
+
+Daily notes are cumulative.
+
+When today's daily note already exists:
+
+- Read it first.
+- Preserve all existing content.
+- Append the new activity as a new `##` section.
+- Never replace earlier activities with the current task.
+
+### What to record
+
+Capture information that will help future troubleshooting, maintenance, upgrades, migrations, or architectural decisions, including:
+
+- what was implemented or changed
+- why the chosen architecture was used
+- important paths, namespaces, services, and relationships
+- problems encountered and their root causes
+- unsuccessful approaches when they provide useful troubleshooting knowledge
+- fixes and important gotchas
+- validation performed
+- significant decisions and their reasoning
+- remaining work or known limitations
+
+Do not merely copy terminal output into the vault. Convert the work into concise, reusable operational knowledge.
+
+### Security
+
+Never record:
+
+- passwords
+- API tokens
+- private keys
+- secret values
+- kubeconfigs
+- authentication cookies
+- recovery codes
+- other sensitive credentials
+
+References to secret locations such as OpenBao paths and expected property names are acceptable when they do not expose secret values.
+
+### Completion
+
+For substantial homelab work, documentation in the canonical Second Brain is part of completing the task.
+
+After updating the vault:
+
+1. Verify the files were written successfully.
+2. Preserve useful cross-links between related notes.
+3. Report which vault notes were created or updated.
+
+## Nova Second Brain Inbox Workflow
+
+Nova's canonical Second Brain inbox is:
+
+`/home/gerso/Development/ninjatronics-ai/vault/1_Inbox`
+
+Markdown files placed in `1_Inbox/` represent pending work, questions, research items, implementation ideas, troubleshooting tasks, or documentation that requires processing.
+
+At the beginning of substantial work, and before declaring a work session complete:
+
+1. Inspect `1_Inbox/` for `*.md` files.
+2. Read each pending Markdown file.
+3. Determine whether the item:
+   - can be completed safely without infrastructure changes,
+   - requires research or a proposed implementation plan,
+   - requires user approval before execution,
+   - belongs in another permanent vault location,
+   - or is blocked and requires more information.
+4. Do not silently ignore inbox items.
+5. Do not treat the presence of an inbox file as authorization to make destructive, security-sensitive, production, DNS, secret, or infrastructure changes.
+
+For inbox items requiring changes to the homelab:
+
+1. Research and inspect the current environment.
+2. Prepare the proposed implementation plan.
+3. Explain risks, required secrets, external actions, validation, and rollback.
+4. Stop and obtain approval before making changes unless the user has already explicitly authorized implementation.
+
+When an inbox item is completed:
+
+1. Preserve the useful knowledge in the appropriate permanent vault note.
+2. Update the relevant daily note.
+3. Record how the work was validated.
+4. Remove or archive the inbox item only after its work has been completed and documented.
+5. Never delete an unresolved inbox item merely because it has been reviewed.
+
+If an inbox item is blocked, preserve it and clearly document what is required to continue.

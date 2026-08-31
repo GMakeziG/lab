@@ -19,5 +19,10 @@ data:
   SYMFONY__ENV__FROM_EMAIL: wallabag@ninjatronics.io
   SYMFONY__ENV__TWOFACTOR_SENDER: wallabag@ninjatronics.io
   SYMFONY__ENV__MAILER_DSN: smtp://127.0.0.1
-  POSTGRES_USER: postgres
+  # POSTGRES_USER=wallabag makes the PostgreSQL superuser IS the Wallabag app
+  # user. This gives it ownership of the wallabag database and CREATE on the
+  # public schema, which is required because PostgreSQL 15+ no longer grants
+  # CREATE on public to non-superusers. The Wallabag entrypoint connects as
+  # this user (SYMFONY__ENV__DATABASE_USER=wallabag) and can create tables.
+  POSTGRES_USER: wallabag
   POPULATE_DATABASE: "True"

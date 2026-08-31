@@ -39,16 +39,20 @@ spec:
           image: postgres:17.11-alpine
           imagePullPolicy: IfNotPresent
           env:
+            # POSTGRES_USER=wallabag makes the superuser IS the app user, so it
+            # owns the database and has CREATE on the public schema (required by
+            # PostgreSQL 15+). POSTGRES_DB=postgres (not wallabag) so the
+            # Wallabag entrypoint sees the wallabag database does NOT exist yet,
+            # creates it, and runs wallabag:install as the superuser.
             - name: POSTGRES_USER
+              value: wallabag
+            - name: POSTGRES_DB
               value: postgres
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: wallabag-secret
                   key: POSTGRES_PASSWORD
-            # No POSTGRES_DB is set; the Wallabag entrypoint creates the
-            # "wallabag" database and user on first boot using the superuser
-            # credentials.
             # initdb requires the data directory to be 0700, which it cannot
             # enforce on the fsGroup-owned mount root. Use a subdirectory.
             - name: PGDATA
@@ -76,7 +80,7 @@ spec:
               memory: 1Gi
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres"]
+              command: ["pg_isready", "-U", "wallabag", "-d", "wallabag"]
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
@@ -84,7 +88,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres"]
+              command: ["pg_isready", "-U", "wallabag", "-d", "wallabag"]
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5

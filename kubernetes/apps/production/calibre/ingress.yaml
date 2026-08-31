@@ -5,15 +5,15 @@ metadata:
   namespace: calibre
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    cert-manager.io/cluster-issuer: lab-selfsigned
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
 spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - calibre.internal
-      secretName: calibre-internal-tls
+        - calibre.ninjatronics.io
+      secretName: calibre-ninjatronics-io-tls
   rules:
-    - host: calibre.internal
+    - host: calibre.ninjatronics.io
       http:
         paths:
           - path: /

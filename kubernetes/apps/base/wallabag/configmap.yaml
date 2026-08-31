@@ -25,4 +25,9 @@ data:
   # CREATE on public to non-superusers. The Wallabag entrypoint connects as
   # this user (SYMFONY__ENV__DATABASE_USER=wallabag) and can create tables.
   POSTGRES_USER: wallabag
+  # PGDATABASE=postgres tells psql (called by the Wallabag entrypoint) to connect
+  # to the "postgres" database by default, not "wallabag" (which does not exist
+  # yet at first boot). The entrypoint creates the "wallabag" database via psql
+  # connected to "postgres", then runs wallabag:install.
+  PGDATABASE: postgres
   POPULATE_DATABASE: "True"

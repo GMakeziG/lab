@@ -8,6 +8,30 @@ GitOps-managed Kubernetes homelab using FluxCD and k3s. Git is the single source
 
 Nodes: `zion` (control plane), `samson` and `niner` (workers).
 
+## Nova / Agent Operating Model
+
+When Nova is operating in this repository, Nova remains the orchestrator.
+
+Before substantial work, read:
+
+`/home/gerso/Development/ninjatronics-ai/AGENTS.md`
+
+Then follow the authoritative routing and orchestration policy referenced there:
+
+`/home/gerso/Development/ninjatronics-ai/shared/standards/agent-routing.md`
+
+These instructions define:
+
+- when Nova handles work directly
+- when work should be delegated to Claude Code, Codex, or specialist agents
+- Herdr orchestration behavior
+- concurrency and worktree requirements
+- validation, escalation, and final coordination responsibilities
+
+This repository's `CLAUDE.md` adds homelab-specific GitOps, Kubernetes, Flux, OpenBao, networking, and validation requirements.
+
+If repository-specific instructions conflict with the authoritative Nova orchestration policy, stop and ask the user rather than silently choosing one.
+
 ## Before Making Changes
 
 - Read `.claude/context/lab-architecture.md` for full context
@@ -22,7 +46,8 @@ Nodes: `zion` (control plane), `samson` and `niner` (workers).
 - Never apply manifests directly with `kubectl` unless explicitly requested.
 - Prefer editing manifests in Git and letting Flux reconcile.
 - Never store plaintext secrets in Git.
-- Use SOPS with age encryption for all secrets.
+- Use OpenBao + External Secrets Operator for runtime application secrets when supported by the existing secrets architecture.
+- Use SOPS with age encryption for bootstrap secrets or other Git-managed secrets that intentionally require encrypted storage in Git.
 - Existing External Secrets backed by OpenBao should remain in use unless migrating intentionally.
 - Always preserve Flux directory structure.
 - Validate manifests with `kubectl kustomize` before committing.
@@ -184,118 +209,51 @@ When adding a new application:
    ```bash
    curl -I https://hostname
    ```
-## Nova Second Brain Documentation
 
-Zion hosts Nova's canonical Second Brain vault at:
+## Second Brain Integration
+
+Nova's canonical Second Brain is:
 
 `/home/gerso/Development/ninjatronics-ai/vault`
 
-The vault is synchronized through Obsidian Sync for consumption by other Obsidian clients.
+For substantial homelab work, follow the persistence and vault policies defined by:
 
-After completing and verifying meaningful homelab work, record durable operational knowledge from the work in the canonical vault.
+`/home/gerso/Development/ninjatronics-ai/AGENTS.md`
 
-Before modifying the vault:
+and the vault-specific instructions in:
 
-1. Read `/home/gerso/Development/ninjatronics-ai/vault/AGENTS.md`.
-2. Follow the organization and documentation rules defined there.
-3. Inspect existing notes before creating new ones.
-4. Update existing system, project, runbook, or reference notes when they already cover the subject.
-5. Do not duplicate information unnecessarily.
+`/home/gerso/Development/ninjatronics-ai/vault/AGENTS.md`
 
-Use the appropriate vault locations:
+Homelab discoveries worth preserving commonly include:
 
-- `2_Systems/` — current architecture, application, host, and system state
-- `3_Projects/` — project-specific work, milestones, and decisions
-- `4_Runbooks/` — repeatable operational and troubleshooting procedures
-- `5_References/` — reusable technical concepts, patterns, and implementation knowledge
-- `6_Daily/YYYY-MM-DD.md` — chronological record of meaningful work performed that day
+- deployed application architecture
+- namespaces, services, storage, and dependency relationships
+- GitOps implementation decisions
+- OpenBao secret paths and expected property names, but never secret values
+- networking, Traefik, TLS, and Cloudflare patterns
+- troubleshooting root causes and fixes
+- operational runbooks
+- validation procedures
+- known limitations and remaining work
 
-### Daily notes
-
-Daily notes are cumulative.
-
-When today's daily note already exists:
-
-- Read it first.
-- Preserve all existing content.
-- Append the new activity as a new `##` section.
-- Never replace earlier activities with the current task.
-
-### What to record
-
-Capture information that will help future troubleshooting, maintenance, upgrades, migrations, or architectural decisions, including:
-
-- what was implemented or changed
-- why the chosen architecture was used
-- important paths, namespaces, services, and relationships
-- problems encountered and their root causes
-- unsuccessful approaches when they provide useful troubleshooting knowledge
-- fixes and important gotchas
-- validation performed
-- significant decisions and their reasoning
-- remaining work or known limitations
-
-Do not merely copy terminal output into the vault. Convert the work into concise, reusable operational knowledge.
-
-### Security
-
-Never record:
-
-- passwords
-- API tokens
-- private keys
-- secret values
-- kubeconfigs
-- authentication cookies
-- recovery codes
-- other sensitive credentials
-
-References to secret locations such as OpenBao paths and expected property names are acceptable when they do not expose secret values.
-
-### Completion
-
-For substantial homelab work, documentation in the canonical Second Brain is part of completing the task.
-
-After updating the vault:
-
-1. Verify the files were written successfully.
-2. Preserve useful cross-links between related notes.
-3. Report which vault notes were created or updated.
+Repository documentation should remain in this repository. The vault should preserve durable operational knowledge and may link to repository documentation rather than duplicating it.
 
 ## Nova Second Brain Inbox Workflow
 
-Nova's canonical Second Brain inbox is:
+At the beginning of substantial homelab work and before completing a work session, inspect:
 
-`/home/gerso/Development/ninjatronics-ai/vault/1_Inbox`
+`/home/gerso/Development/ninjatronics-ai/vault/1_Inbox/`
 
-Markdown files placed in `1_Inbox/` represent pending work, questions, research items, implementation ideas, troubleshooting tasks, or documentation that requires processing.
+Any `*.md` file there represents pending work that must be reviewed and triaged.
 
-At the beginning of substantial work, and before declaring a work session complete:
+For each inbox item:
 
-1. Inspect `1_Inbox/` for `*.md` files.
-2. Read each pending Markdown file.
-3. Determine whether the item:
-   - can be completed safely without infrastructure changes,
-   - requires research or a proposed implementation plan,
-   - requires user approval before execution,
-   - belongs in another permanent vault location,
-   - or is blocked and requires more information.
-4. Do not silently ignore inbox items.
-5. Do not treat the presence of an inbox file as authorization to make destructive, security-sensitive, production, DNS, secret, or infrastructure changes.
+1. Read it.
+2. Determine whether it can be handled directly, delegated under the agent-routing policy, requires a plan, requires user approval, or is blocked.
+3. Do not interpret an inbox item as authorization for destructive, production, security-sensitive, DNS, secret-management, or external-service changes.
+4. Follow the normal approval requirements before implementation.
+5. When completed, preserve durable knowledge according to the canonical vault policy.
+6. Archive or remove the inbox item only after its work has been completed and documented.
+7. Preserve unresolved or blocked items and record what is required to continue.
 
-For inbox items requiring changes to the homelab:
-
-1. Research and inspect the current environment.
-2. Prepare the proposed implementation plan.
-3. Explain risks, required secrets, external actions, validation, and rollback.
-4. Stop and obtain approval before making changes unless the user has already explicitly authorized implementation.
-
-When an inbox item is completed:
-
-1. Preserve the useful knowledge in the appropriate permanent vault note.
-2. Update the relevant daily note.
-3. Record how the work was validated.
-4. Remove or archive the inbox item only after its work has been completed and documented.
-5. Never delete an unresolved inbox item merely because it has been reviewed.
-
-If an inbox item is blocked, preserve it and clearly document what is required to continue.
+Do not silently ignore pending inbox Markdown files.

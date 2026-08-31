@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallabag
+  labels:
+    app.kubernetes.io/name: wallabag
+spec:
+  replicas: 1
+  strategy:
+    # local-path volumes are RWO/single-node; avoid two pods contending for the PVC.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wallabag
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wallabag
+    spec:
+      # local-path storage is node-local; pin to niner so the PV location is
+      # deterministic and lands on the same node as the PostgreSQL PVC. This is a
+      # single point of failure by design -- no replication, no failover.
+      nodeSelector:
+        kubernetes.io/hostname: niner
+      containers:
+        - name: wallabag
+          # Pinned to a specific stable release + digest (verified via docker inspect).
+          # 2.6.14 is the latest stable release (October 2025).
+          image: wallabag/wallabag:2.6.14@sha256:4a527e027e0d59e87c14225ef11e005af3d4890374202ad319ce5e63dfc66709
+          imagePullPolicy: IfNotPresent
+          # The Wallabag image runs as root for s6-svscan + nginx port-80 binding.
+          # allowPrivilegeEscalation is disabled; runAsNonRoot and capabilities.drop
+          # are NOT set because they would break the image's s6/nginx architecture.
+          securityContext:
+            allowPrivilegeEscalation: false
+          envFrom:
+            - configMapRef:
+                name: wallabag-config
+            - secretRef:
+                name: wallabag-secret
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/info
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/info
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: images
+              mountPath: /var/www/wallabag/web/assets/images
+            - name: data
+              mountPath: /var/www/wallabag/data
+      volumes:
+        - name: images
+          persistentVolumeClaim:
+            claimName: wallabag-images
+        - name: data
+          persistentVolumeClaim:
+            claimName: wallabag-data

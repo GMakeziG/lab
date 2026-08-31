@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wallabag-config
+  labels:
+    app.kubernetes.io/name: wallabag
+data:
+  SYMFONY__ENV__DATABASE_DRIVER: pdo_pgsql
+  SYMFONY__ENV__DATABASE_HOST: wallabag-postgres
+  SYMFONY__ENV__DATABASE_PORT: "5432"
+  SYMFONY__ENV__DATABASE_NAME: wallabag
+  SYMFONY__ENV__DATABASE_USER: wallabag
+  SYMFONY__ENV__DATABASE_CHARSET: utf8
+  SYMFONY__ENV__DOMAIN_NAME: https://wallabag.ninjatronics.io
+  SYMFONY__ENV__SERVER_NAME: Ninjatronics Wallabag
+  SYMFONY__ENV__FOSUSER_REGISTRATION: "false"
+  SYMFONY__ENV__FOSUSER_CONFIRMATION: "false"
+  SYMFONY__ENV__LOCALE: en
+  SYMFONY__ENV__FROM_EMAIL: wallabag@ninjatronics.io
+  SYMFONY__ENV__TWOFACTOR_SENDER: wallabag@ninjatronics.io
+  SYMFONY__ENV__MAILER_DSN: smtp://127.0.0.1
+  POSTGRES_USER: postgres
+  POPULATE_DATABASE: "True"

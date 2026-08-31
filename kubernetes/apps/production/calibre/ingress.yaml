@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calibre
+  namespace: calibre
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: lab-selfsigned
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - calibre.internal
+      secretName: calibre-internal-tls
+  rules:
+    - host: calibre.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: calibre
+                port:
+                  number: 8080

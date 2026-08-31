@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - audiobookshelf
+  - calibre
   - excalidash
   - firecrawl
   - forgejo

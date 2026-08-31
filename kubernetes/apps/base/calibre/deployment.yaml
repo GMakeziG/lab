@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calibre
+  labels:
+    app.kubernetes.io/name: calibre
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: calibre
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: calibre
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: niner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: calibre
+          image: ghcr.io/ninjatronics/calibre-server:9.14.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          envFrom:
+            - configMapRef:
+                name: calibre-config
+          env:
+            - name: CALIBRE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: calibre-secret
+                  key: CALIBRE_USERNAME
+            - name: CALIBRE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calibre-secret
+                  key: CALIBRE_PASSWORD
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: library
+              mountPath: /library
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: calibre-config
+        - name: library
+          persistentVolumeClaim:
+            claimName: calibre-library

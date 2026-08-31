@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calibre-config
+data:
+  CALIBRE_CONFIG_DIRECTORY: /config
+  TZ: America/Los_Angeles

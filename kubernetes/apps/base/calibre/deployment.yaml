@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: calibre
-          image: ghcr.io/ninjatronics/calibre-server:9.14.0@sha256:429bb900368ea140d7d0ecbd6d3cee5210dc701f92783f04feec18995e39013d
+          image: ghcr.io/gmakezig/calibre-server:9.14.0@sha256:429bb900368ea140d7d0ecbd6d3cee5210dc701f92783f04feec18995e39013d
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

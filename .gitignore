@@ -138,44 +138,53 @@ sealed-secrets-key*.yaml
 **/charts/*.tgz
 
 # ------------------------------------------------------------
-# AI / Agent Tooling
+# AI / Agent Tooling — NEVER COMMIT
 # ------------------------------------------------------------
 
 # Claude Code
 .claude/
 **/.claude/
+CLAUDE.md
+**/CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.local.md
 
-# Codex / agent configuration
+# Codex / generic agent config
 .codex/
 **/.codex/
 
 .agents/
 **/.agents/
 
-# Agent orchestration / working state
+AGENTS.md
+**/AGENTS.md
+AGENTS.local.md
+**/AGENTS.local.md
+
+# Hermes / Herdr / orchestration
 .hermes/
 **/.hermes/
 
 .herdr/
 **/.herdr/
 
-# Agent prompts, sessions, transcripts, handoffs
+# Agent runtime artifacts
+**/handoffs/
 **/sessions/
 **/transcripts/
-**/handoffs/
+**/prompts/
+**/scratch/
+**/agent-output/
+**/agent-results/
 
-# Common agent-generated files
-AGENTS.local.md
-CLAUDE.local.md
-.agents/skills
-.claude
-CLAUDE.md
+# Agent metadata / lock files
 skills-lock.json
+**/skills-lock.json
 
-# OpenSrc
-# Upstream source/cache must never be committed into the lab repository.
+# OpenSrc local/cache content
 .opensrc/
 **/.opensrc/
+
 # ------------------------------------------------------------
 
 # Temporary Files

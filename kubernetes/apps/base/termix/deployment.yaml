@@ -17,6 +17,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: termix
+      annotations:
+        # envFrom does not roll the pod when termix-config changes, and an
+        # imperative `kubectl rollout restart` is reverted by Flux on its next
+        # reconcile. Bump this whenever configmap.yaml changes so the new
+        # environment is picked up declaratively.
+        lab/config-revision: "2"
     spec:
       serviceAccountName: termix
       automountServiceAccountToken: false

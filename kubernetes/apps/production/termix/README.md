@@ -56,7 +56,15 @@ kubectl get secret termix-secret -n termix -o jsonpath='{.data}' | jq 'keys'
 ```
 
 `kubernetes/apps/base/termix/secret.example.yaml` documents the expected keys.
-It is intentionally excluded from `kustomization.yaml`.
+It is intentionally excluded from `kustomization.yaml`, and `.gitignore` also
+ignores `**/secret.example.yaml`, so it exists only in working trees.
+
+## Changing configuration
+
+`envFrom` does not roll the pod when `termix-config` changes, and an imperative
+`kubectl rollout restart` is reverted by Flux on its next reconcile. Bump the
+`lab/config-revision` pod annotation in `deployment.yaml` in the same commit as
+any `configmap.yaml` change so the new environment rolls out declaratively.
 
 ## Storage and encryption at rest
 
@@ -115,10 +123,13 @@ nginx reaches it over loopback, so those stay off the Service.
 
 ### Open hardening items
 
-- **`ALLOW_REGISTRATION`.** Registration defaults to open and the first user
-  registered becomes admin (`src/backend/database/routes/users.ts:107`). It is
-  open only for the initial admin bootstrap and must be set to `false` before
-  any exposure.
+- **`ALLOW_REGISTRATION`.** Closed (`ALLOW_REGISTRATION=false` in
+  `termix-config`). Registration defaults to open and the first account
+  registered becomes admin (`src/backend/database/routes/users.ts:107`); it was
+  open only for the initial admin bootstrap. The environment variable takes
+  precedence over the in-database `allow_registration` setting, so it cannot be
+  re-enabled from the UI without a Git change. Verify with
+  `GET /users/registration-allowed`, which must report `{"allowed":false}`.
 - **NetworkPolicy.** Not implemented. Termix's purpose is outbound SSH to
   arbitrary hosts, so a default-deny egress policy needs real design. Treat
   "default-deny ingress except Traefik" as a Phase 2 prerequisite.

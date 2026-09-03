@@ -15,6 +15,12 @@ data:
   # server entirely. GUACD_HOST/GUACD_PORT are deliberately unset:
   # src/backend/utils/guacd-config.ts:57 treats that as "no guacd".
   ENABLE_GUACAMOLE: "false"
+  # Registration is open by default and the first account registered becomes
+  # admin (src/backend/database/routes/users.ts:107). The administrator account
+  # exists, so registration is now closed. The env var takes precedence over the
+  # in-database allow_registration setting, so it cannot be re-enabled from the
+  # UI without a Git change.
+  ALLOW_REGISTRATION: "false"
   # Termix ships a PostHog key baked into the image and telemetry defaults on.
   # An SSH broker should not make unsolicited outbound calls.
   ENABLE_TELEMETRY: "false"

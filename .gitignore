@@ -167,6 +167,10 @@ sealed-secrets-key*.yaml
 # Common agent-generated files
 AGENTS.local.md
 CLAUDE.local.md
+.agents/skills
+.claude
+CLAUDE.md
+skills-lock.json
 
 # OpenSrc
 # Upstream source/cache must never be committed into the lab repository.

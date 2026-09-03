@@ -6,3 +6,4 @@ namespace: termix
 resources:
   - ../../base/termix
   - external-secrets
+  - ingress.yaml

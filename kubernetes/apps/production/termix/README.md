@@ -3,9 +3,19 @@
 Self-hosted SSH / SFTP / tunnel management. Deployed as plain manifests rather
 than the upstream Helm chart -- see "Why not the upstream chart" below.
 
-Phase 1 is **internal only**: ClusterIP on port 8080, no Ingress, no Traefik
-route, no cloudflared route, no Cloudflare DNS, no Cloudflare Access. Public
-exposure is Phase 2 and is not authorised yet.
+Publicly reachable at <https://termix.ninjatronics.io> through the
+`homelab-k3s` Cloudflare Tunnel, behind Cloudflare Access.
+
+```
+browser -> Cloudflare (Access) -> cloudflared -> Traefik (websecure)
+        -> Service termix:8080 -> nginx -> Termix backend (loopback 30001)
+```
+
+Cloudflare Access is an **additional** authentication layer in front of
+Termix's own login, never a replacement for it. Trusted proxy authentication
+(`TRUSTED_PROXY_AUTH_ENABLED`) is deliberately not enabled -- upstream's own
+compose file warns against it for anything reachable by untrusted clients.
+Only port 8080 is routed; the backend's 30001-30012 stay on loopback.
 
 ## Layout
 
@@ -13,7 +23,9 @@ exposure is Phase 2 and is not authorised yet.
 |---|---|
 | `kubernetes/apps/base/termix/` | ServiceAccount, ConfigMap, PVC, Deployment, Service |
 | `kubernetes/apps/production/termix/external-secrets/` | ExternalSecret backed by OpenBao |
+| `kubernetes/apps/production/termix/ingress.yaml` | Traefik ingress + cert-manager TLS |
 | `kubernetes/namespaces/termix.yaml` | Namespace |
+| `kubernetes/infrastructure/base/cloudflared/config.yaml` | Tunnel hostname rule |
 
 ## Image
 
@@ -131,18 +143,35 @@ nginx reaches it over loopback, so those stay off the Service.
   re-enabled from the UI without a Git change. Verify with
   `GET /users/registration-allowed`, which must report `{"allowed":false}`.
 - **NetworkPolicy.** Not implemented. Termix's purpose is outbound SSH to
-  arbitrary hosts, so a default-deny egress policy needs real design. Treat
-  "default-deny ingress except Traefik" as a Phase 2 prerequisite.
-- **Cloudflare Access.** Mandatory for Phase 2, in addition to Termix's own
-  authentication, because Termix brokers administrative access to the homelab.
+  arbitrary hosts, so a default-deny egress policy needs real design.
+  "Default-deny ingress except Traefik" is the next hardening step now that the
+  service is publicly routed.
+- **Cloudflare Access.** In place for `termix.ninjatronics.io`, in addition to
+  Termix's own authentication, because Termix brokers administrative access to
+  the homelab. It must stay in front of this hostname.
 
-## Temporary internal access
+## Ingress and TLS
+
+The Ingress carries `cert-manager.io/cluster-issuer:
+letsencrypt-production-cloudflare`, so cert-manager's ingress-shim creates the
+Certificate; there is no explicit Certificate manifest, matching every other
+app here. The TLS Secret follows the repository convention of the hostname with
+dots replaced by dashes: `termix-ninjatronics-io-tls`.
+
+The cloudflared hostname rule lives in
+`kubernetes/infrastructure/base/cloudflared/config.yaml`, before the
+`http_status:404` catch-all, and points at Traefik like every other public app.
+That file is consumed by a `configMapGenerator`, so editing it changes the
+generated ConfigMap name and Flux rolls cloudflared automatically.
+
+## Internal access without Cloudflare
 
 ```sh
 kubectl port-forward -n termix svc/termix 8080:8080
 ```
 
-Then open <http://127.0.0.1:8080>.
+Then open <http://127.0.0.1:8080>. Useful for diagnosing whether a problem is
+in Termix or in the Cloudflare/Traefik path.
 
 ## Why not the upstream chart
 

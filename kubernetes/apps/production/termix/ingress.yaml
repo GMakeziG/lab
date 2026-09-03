@@ -1,0 +1,29 @@
+# Public exposure. Cloudflare Access sits in front of this hostname and is an
+# additional layer on top of Termix's own authentication, not a replacement
+# for it. Registration stays disabled (ALLOW_REGISTRATION=false) and trusted
+# proxy authentication is deliberately not enabled.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: termix
+  namespace: termix
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - termix.ninjatronics.io
+      secretName: termix-ninjatronics-io-tls
+  rules:
+    - host: termix.ninjatronics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: termix
+                port:
+                  number: 8080

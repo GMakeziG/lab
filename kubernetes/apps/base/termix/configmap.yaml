@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: termix-config
+  labels:
+    app.kubernetes.io/name: termix
+data:
+  PORT: "8080"
+  DATA_DIR: /app/data
+  NODE_ENV: production
+  # Guacamole covers RDP/VNC/Telnet only (src/backend/starter.ts:320). This
+  # deployment uses SSH, SFTP, tunnels and host monitoring, all of which run
+  # through Termix's own SSH backend, so the guacd sidecar is not deployed.
+  # With ENABLE_GUACAMOLE=false the backend skips loading the Guacamole
+  # server entirely. GUACD_HOST/GUACD_PORT are deliberately unset:
+  # src/backend/utils/guacd-config.ts:57 treats that as "no guacd".
+  ENABLE_GUACAMOLE: "false"
+  # Termix ships a PostHog key baked into the image and telemetry defaults on.
+  # An SSH broker should not make unsolicited outbound calls.
+  ENABLE_TELEMETRY: "false"

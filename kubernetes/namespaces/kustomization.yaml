@@ -13,4 +13,5 @@ resources:
   - observability.yaml
   - platform.yaml
   - renovate.yaml
+  - termix.yaml
   - wallabag.yaml

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: termix
+  labels:
+    app.kubernetes.io/name: termix
+spec:
+  replicas: 1
+  # SQLite: the upstream chart's validate.yaml refuses more than one replica,
+  # and /app/data is a ReadWriteOnce local-path volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: termix
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: termix
+    spec:
+      serviceAccountName: termix
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: niner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: termix
+          image: ghcr.io/lukegus/termix:release-2.7.0@sha256:be6080b9d4b282984bd9ffc280d1d9fd30b22539adb33853c44d783343c83d33
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            # Must stay false. docker/entrypoint.sh renders the nginx config
+            # into /tmp/nginx and unconditionally rewrites /app/html/**/sw.js
+            # with sed -i on every start, so the image root filesystem is
+            # written to before the backend comes up. Both paths are inside
+            # the image (owned by uid/gid 1000), not on the data volume, so
+            # an emptyDir cannot substitute for write access here.
+            readOnlyRootFilesystem: false
+          envFrom:
+            - configMapRef:
+                name: termix-config
+            - secretRef:
+                name: termix-secret
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # /health is served by nginx on 8080 and proxied to the backend on
+          # loopback 30001. The backend ports (30001-30012) stay loopback-only
+          # and are deliberately not exposed by the Service.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: termix-data

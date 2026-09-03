@@ -238,6 +238,25 @@ Homelab discoveries worth preserving commonly include:
 
 Repository documentation should remain in this repository. The vault should preserve durable operational knowledge and may link to repository documentation rather than duplicating it.
 
+## OpenSrc
+
+OpenSrc is installed globally on Zion:
+
+`/home/gerso/.nvm/versions/node/v24.18.0/bin/opensrc`
+
+Use it when upstream source code would improve implementation accuracy.
+
+Examples:
+
+opensrc path github:OWNER/REPO
+opensrc path PACKAGE
+rg "<pattern>" "$(opensrc path github:OWNER/REPO)"
+
+Prefer targeted inspection of fetched upstream source over cloning third-party
+repositories into this GitOps repository.
+
+Do not commit OpenSrc cache contents or fetched upstream source.
+
 ## Nova Second Brain Inbox Workflow
 
 At the beginning of substantial homelab work and before completing a work session, inspect:

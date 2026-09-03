@@ -138,14 +138,40 @@ sealed-secrets-key*.yaml
 **/charts/*.tgz
 
 # ------------------------------------------------------------
-
-# AI Tooling
-
+# AI / Agent Tooling
 # ------------------------------------------------------------
 
+# Claude Code
 .claude/
-.claude/sessions/
+**/.claude/
 
+# Codex / agent configuration
+.codex/
+**/.codex/
+
+.agents/
+**/.agents/
+
+# Agent orchestration / working state
+.hermes/
+**/.hermes/
+
+.herdr/
+**/.herdr/
+
+# Agent prompts, sessions, transcripts, handoffs
+**/sessions/
+**/transcripts/
+**/handoffs/
+
+# Common agent-generated files
+AGENTS.local.md
+CLAUDE.local.md
+
+# OpenSrc
+# Upstream source/cache must never be committed into the lab repository.
+.opensrc/
+**/.opensrc/
 # ------------------------------------------------------------
 
 # Temporary Files

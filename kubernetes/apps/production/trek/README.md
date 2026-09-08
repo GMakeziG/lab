@@ -9,24 +9,48 @@ This overlay adds:
 - `external-secrets/` — the `ExternalSecret` reading `secret/apps/trek` from OpenBao
 - `ingress.yaml` — the Traefik HTTPS Ingress for `trek.ninjatronics.io`
 
-## Phase 1 is internal only
+## Exposure — Phase 2 (public, behind Cloudflare Access)
 
 TREK holds personal trip documents, and **upstream defaults public registration
 to open** with no environment variable to close it (see *Registration* below).
-Phase 1 therefore stays off the internet until the administrator has closed
-registration by hand.
+It therefore stayed off the internet through Phase 1 until registration was
+closed by hand and verified.
 
-What that means concretely:
+Current state:
 
 | | Status |
 | --- | --- |
-| Cloudflare Tunnel route | **none** — `infrastructure/base/cloudflared/config.yaml` untouched |
-| Public A / CNAME for `trek.ninjatronics.io` | **none** |
-| Cloudflare Access policy | **none** |
-| NetworkPolicy | **none** (no precedent for app NetworkPolicies in this repo yet) |
+| Cloudflare Tunnel route | **present** — `infrastructure/base/cloudflared/config.yaml`, before the catch-all |
+| Public CNAME | `trek.ninjatronics.io` → `<tunnel-id>.cfargotunnel.com`, Cloudflare-proxied |
+| Cloudflare Access | Self-hosted application with a restrictive Allow policy |
 | TLS certificate | issued, via Cloudflare **DNS-01** |
+| NetworkPolicy | **none** (no precedent for app NetworkPolicies in this repo yet) |
 
-### How to reach it during Phase 1
+Request path:
+
+```
+client → Cloudflare (Access policy) → Cloudflare Tunnel → Traefik → trek:3000
+```
+
+> **Cloudflare Access is an additional authentication boundary, not a
+> replacement for TREK's own.** TREK password login plus TOTP remains the
+> authoritative check. Access is what makes an upstream default flipping back
+> open — or a data-PVC restore from before the settings were written — a
+> non-event rather than an exposure.
+
+Registration is closed on all three paths and OIDC is not configured; the
+five-flag check below is the precondition for this route existing at all.
+
+### Phase 1 history: reaching it before public exposure
+
+The section below records how TREK was reached while it was internal-only. It
+is kept because the same mechanism is the fallback whenever Cloudflare or the
+tunnel is unavailable, and because it explains why no AdGuard rewrite exists.
+
+> **The temporary hosts-file line must now be removed** from any workstation
+> that still has it. With the public route live, a stale
+> `10.99.0.242 trek.ninjatronics.io` entry sends that machine straight to
+> Traefik and **bypasses Cloudflare Access entirely**.
 
 There is **no split-horizon DNS in this lab**. AdGuard Home is deployed and
 filtering, but it holds no rewrites for `ninjatronics.io` — it forwards upstream
@@ -55,9 +79,10 @@ rewrite would send every LAN client straight to Traefik forever, silently
 **bypassing Cloudflare Access** once Phase 2 puts it in front. A hosts line
 that gets deleted does not have that failure mode.
 
-> **The hosts-file line must be removed during Phase 2, before public
-> validation.** Leaving it in place keeps that workstation bypassing Cloudflare
-> Access.
+> **Remove this line now that the public route is live.** A workstation that
+> still has it resolves `trek.ninjatronics.io` straight to Traefik and
+> **bypasses Cloudflare Access**. Re-add it only as a deliberate fallback when
+> Cloudflare or the tunnel is unavailable, and remove it again afterwards.
 
 ### Why the certificate issues without public DNS
 
@@ -207,7 +232,10 @@ curl -sk https://trek.ninjatronics.io/api/auth/app-config | jq \
    the running container. Then remove the `admin-email` / `admin-password`
    properties from OpenBao. **Done** — see *Bootstrap secrets* below.
 
-Only after steps 7 and 8 pass may Phase 2 be considered.
+Steps 7 and 8 were the gate on public exposure. Both passed, and the Cloudflare
+Tunnel route was added afterwards — see *Exposure* at the top. Re-run step 7
+before any change that touches authentication, and after any restore of the
+data PVC.
 
 ## Bootstrap secrets — removed
 
@@ -228,17 +256,15 @@ two properties can be deleted from `secret/apps/trek` in OpenBao. Deleting them
 is safe on an initialised instance and is done by the operator, not by Flux.
 
 ## Follow-up changes already identified
-- **Phase 2 (not authorized):** Cloudflare Access → Cloudflare Tunnel → Traefik
-  → TREK login + TOTP. Requires a `cloudflared` ingress rule, a Cloudflare DNS
-  Tunnel record, an Access policy, and removal of the hosts-file line.
-  **Precondition:** re-run the five-flag check above — `allow_registration`,
-  `password_registration`, `oidc_registration`, `oidc_login` and
-  `oidc_configured` must all still be `false`. These live in SQLite on the data
-  PVC, not in Git, so Flux will not restore them if they drift or if the volume
-  is ever restored from an early backup.
-  Note Cloudflare's free plan caps request bodies at 100 MB while TREK allows
-  500 MB uploads — do backup restores over port-forward, not the public
-  hostname.
+- **Upload ceiling through Cloudflare:** the free plan caps request bodies at
+  **100 MB**, while TREK allows 50 MB files, 500 MB video and a 500 MB backup
+  restore. Large uploads and any backup restore must go over `kubectl
+  port-forward` or the hosts-file fallback, not the public hostname.
+- **Re-verify after any data-PVC restore.** The five auth flags live in SQLite
+  on `trek-data`, **not in Git**, so Flux cannot restore or enforce them.
+  Restoring the volume from a backup taken before they were written would
+  silently reopen registration behind a live public route. Re-run step 7 after
+  any restore.
 - **Future OIDC/SSO work:** before configuring an issuer and client ID, confirm
   `oidc_registration` is `false`. Configuring an IdP while it is `true` opens
   self-registration to anyone who can authenticate there, with no visible

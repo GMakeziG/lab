@@ -56,4 +56,13 @@ ingress:
     originRequest:
       noTLSVerify: true
 
+  # Cloudflare Access sits in front of this hostname and is an additional
+  # authentication boundary on top of TREK's own login + TOTP, not a
+  # replacement for it. Registration is closed on all paths (password, OIDC
+  # and the derived allow_registration flag) and OIDC is not configured.
+  - hostname: trek.ninjatronics.io
+    service: https://traefik.kube-system.svc.cluster.local:443
+    originRequest:
+      noTLSVerify: true
+
   - service: http_status:404

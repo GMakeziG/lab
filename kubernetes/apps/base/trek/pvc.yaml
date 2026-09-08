@@ -1,0 +1,45 @@
+# Two volumes, matching the upstream split (charts/trek/templates/pvc.yaml and
+# docker-compose.yml). Keeping them apart lets uploads grow independently of
+# the database volume and lets backup/restore treat them differently.
+#
+# WARNING: the local-path StorageClass in this cluster has
+# ALLOWVOLUMEEXPANSION=false. These PVCs CANNOT be resized later — growing one
+# means provisioning a new PVC and copying the data. Sizes are deliberate.
+# Reclaim policy is Delete, so removing a PVC destroys its data.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trek-data
+  labels:
+    app.kubernetes.io/name: trek
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # Holds travel.db + WAL, .encryption_key, .jwt_secret, logs/trek.log and
+      # backups/. Oversized on purpose: TREK's own backup archives land in
+      # /app/data/backups and each one bundles the database PLUS the entire
+      # uploads tree (server/src/nest/backup/backup.impl.ts:261). With any
+      # retention window, a 1Gi volume (the upstream chart default) cannot hold
+      # them.
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trek-uploads
+  labels:
+    app.kubernetes.io/name: trek
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # Holds files/ covers/ avatars/ photos/ journey/ places/ — the actual
+      # bytes of trip documents and photos. The trip_files table stores only
+      # metadata. Upload ceilings are 50 MB per file and 500 MB per video
+      # (server/src/nest/files/files.constants.ts:12,20).
+      storage: 50Gi

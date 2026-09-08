@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trek
+  labels:
+    app.kubernetes.io/name: trek
+spec:
+  replicas: 1
+  # SQLite single-writer on a ReadWriteOnce volume. The upstream chart forces
+  # Recreate for the same reason: RollingUpdate would start a second pod holding
+  # the same volume before the old one exits, which is either a Multi-Attach
+  # deadlock or two processes on one travel.db.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trek
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trek
+      annotations:
+        # envFrom does not roll the pod when trek-config changes, and an
+        # imperative `kubectl rollout restart` is reverted by Flux on its next
+        # reconcile. Bump this whenever configmap.yaml changes so the new
+        # environment is picked up declaratively.
+        lab/config-revision: "1"
+    spec:
+      serviceAccountName: trek
+      automountServiceAccountToken: false
+      # local-path binds a volume to the node that first schedules the pod, so
+      # the workload has to be pinned or a reschedule strands it Pending on a
+      # volume it cannot reach. samson is chosen over niner on capacity: samson
+      # has ~933 GB allocatable ephemeral storage against one existing
+      # workload, while niner has ~71 GB against ~180 Gi of existing PVC
+      # requests. TREK is upload-heavy and holds personal documents.
+      # Consequence: samson is now TREK's storage AND failure domain. A samson
+      # outage is a TREK outage; there is no automatic failover.
+      nodeSelector:
+        kubernetes.io/hostname: samson
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: trek
+          image: docker.io/mauriceboe/trek:4.2.1@sha256:777f4d647e973fe7d87fecd957e854b86d57e8d977fd041763e0ca19b3c2e2c0
+          imagePullPolicy: IfNotPresent
+          # The image's default CMD cannot run unprivileged. It ends in
+          # `exec gosu node node ...`, and gosu calls setgroups()
+          # unconditionally, which needs CAP_SETGID — upstream's compose file
+          # re-adds CHOWN/SETUID/SETGID for exactly this reason. Under
+          # runAsNonRoot + drop ALL the stock command dies with
+          # "error: failed switching to 'node': operation not permitted".
+          #
+          # Everything gosu was doing is already handled by runAsUser and
+          # fsGroup above, so the command is overridden to invoke node directly.
+          # /app, /app/data and /app/uploads are already node-owned (uid/gid
+          # 1000) in the image. workingDir must be /app/server because
+          # tsconfig-paths/register resolves tsconfig.json from the cwd.
+          workingDir: /app/server
+          command: ["dumb-init", "--"]
+          args: ["node", "--require", "tsconfig-paths/register", "dist/index.js"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            # TREK writes only to /app/data, /app/uploads and /tmp — verified
+            # across every writeFileSync/mkdirSync in server/src. Upstream's own
+            # docker-compose.yml ships read_only: true.
+            readOnlyRootFilesystem: true
+          envFrom:
+            - configMapRef:
+                name: trek-config
+            - secretRef:
+                name: trek-secret
+          env:
+            # kitinerary-extractor's Qt/KF6 stack needs a writable cache dir.
+            # The image sets this to /tmp/kf6-cache; restated here so the
+            # dependency between readOnlyRootFilesystem and the /tmp emptyDir
+            # below is visible at the point of use rather than only in the image.
+            - name: XDG_CACHE_HOME
+              value: /tmp/kf6-cache
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          # /api/health is public and exempt from the forced-HTTPS redirect
+          # (server/src/nest/health/features.controller.ts:23-26). The server
+          # only calls listen() after all 205 migrations finish
+          # (server/src/index.ts:118), so a green probe is a real readiness
+          # signal. Measured cold start is ~2.6s on one core; the 120s startup
+          # budget is headroom for a loaded node, not the expected case.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              # Measured ~240 MiB steady under a 1Gi limit. The headroom is for
+              # PDF export, image resizing and the forked kitinerary extractor.
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: uploads
+              mountPath: /app/uploads
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: trek-data
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: trek-uploads
+        # Required by readOnlyRootFilesystem: true. Scratch only — nothing
+        # durable is written here.
+        - name: tmp
+          emptyDir: {}

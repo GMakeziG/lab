@@ -1,0 +1,59 @@
+# PHASE 1 — INTERNAL ONLY. NOT PUBLICLY EXPOSED.
+#
+# This Ingress terminates TLS at Traefik for trek.ninjatronics.io, but the
+# hostname is deliberately NOT reachable from the internet:
+#
+#   * There is NO Cloudflare Tunnel route for trek.ninjatronics.io.
+#     kubernetes/infrastructure/base/cloudflared/config.yaml is intentionally
+#     untouched by this deployment.
+#   * There is NO public A or CNAME record for trek.ninjatronics.io.
+#   * Reaching it requires a TEMPORARY hosts-file override on the operator's
+#     workstation pointing the name straight at the Traefik LoadBalancer:
+#
+#         10.99.0.242  trek.ninjatronics.io
+#
+# Traefik is reached directly at 10.99.0.242 (MetalLB pool 10.99.0.0/24) and
+# routes by Host/SNI, so no DNS infrastructure change is involved. AdGuard Home
+# provides NO split-horizon DNS for ninjatronics.io -- it forwards upstream and
+# returns Cloudflare's public proxy addresses, exactly as public resolvers do --
+# and it is deliberately left that way.
+#
+# cert-manager issues the certificate over Cloudflare DNS-01, which only needs a
+# temporary _acme-challenge TXT record created and removed through the
+# Cloudflare API. Issuance therefore does NOT require -- and does not create --
+# any public A/CNAME record, so a valid public-CA certificate is obtained with
+# zero public exposure.
+#
+# PHASE 2 (NOT AUTHORIZED YET): the intended chain is
+# Cloudflare Access -> Cloudflare Tunnel -> Traefik -> TREK login + TOTP.
+# The workstation hosts-file line MUST be removed before public validation,
+# otherwise that workstation keeps bypassing Cloudflare Access.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trek
+  namespace: trek
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-production-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - trek.ninjatronics.io
+      secretName: trek-ninjatronics-io-tls
+  rules:
+    - host: trek.ninjatronics.io
+      http:
+        paths:
+          # Single path prefix on purpose: the SPA, the REST API and the /ws
+          # WebSocket gateway are all served by the same process on port 3000.
+          # Traefik upgrades WebSocket connections natively and imposes no
+          # request-body limit, so neither needs an annotation.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: trek
+                port:
+                  number: 3000

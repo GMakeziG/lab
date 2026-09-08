@@ -20,11 +20,17 @@ spec:
       labels:
         app.kubernetes.io/name: trek
       annotations:
-        # envFrom does not roll the pod when trek-config changes, and an
-        # imperative `kubectl rollout restart` is reverted by Flux on its next
-        # reconcile. Bump this whenever configmap.yaml changes so the new
-        # environment is picked up declaratively.
-        lab/config-revision: "1"
+        # envFrom does not roll the pod when trek-config OR trek-secret changes,
+        # and an imperative `kubectl rollout restart` is reverted by Flux on its
+        # next reconcile. Bump this whenever configmap.yaml changes, or when the
+        # ExternalSecret's key set changes, so the new environment is picked up
+        # declaratively.
+        #
+        # rev 2: dropped the bootstrap-only ADMIN_EMAIL / ADMIN_PASSWORD from
+        # trek-secret. Removing them from the Secret alone would have left them
+        # in the running container's environment until something else happened
+        # to restart the pod.
+        lab/config-revision: "2"
     spec:
       serviceAccountName: trek
       automountServiceAccountToken: false

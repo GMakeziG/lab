@@ -155,8 +155,8 @@ expected keys are documented here instead.
 | OpenBao property | Env var | Format | Lifecycle |
 | --- | --- | --- | --- |
 | `encryption-key` | `ENCRYPTION_KEY` | 64-char hex (32 bytes) | **Permanent, recovery-critical** |
-| `admin-email` | `ADMIN_EMAIL` | e-mail address | **Bootstrap-only** |
-| `admin-password` | `ADMIN_PASSWORD` | ≥8 chars: upper + lower + digit + special | **Bootstrap-only** |
+
+`encryption-key` is the only secret this deployment consumes at runtime.
 
 `ENCRYPTION_KEY` derives the AES-256-GCM keys for everything TREK stores
 encrypted: TOTP/MFA secrets, SMTP password, OIDC client secret, S3 credentials,
@@ -172,10 +172,28 @@ truth (`server/src/nest/backup/backup.impl.ts:257`). The archive is therefore
 not self-decrypting — which also means **a restore is incomplete without
 OpenBao**.
 
-`ADMIN_EMAIL` / `ADMIN_PASSWORD` seed the first administrator and are read
-**only when the database has no users**. They are silently ignored on every
-later boot. They will be removed from the `ExternalSecret` in a separate
-follow-up change once bootstrap is complete.
+### Bootstrap-only secrets, since removed
+
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` seeded the first administrator. They are read
+**only when the database has no users** (`server/src/db/seeds.ts:24-33`) and are
+silently ignored on every later boot — the seeder logs a warning and skips.
+
+They have been **removed from the `ExternalSecret`** now that bootstrap is
+complete: the administrator exists, the bootstrap password has been changed,
+TOTP is enrolled, and registration is closed and verified. Re-adding them would
+have no effect on an initialised instance.
+
+The pod was rolled at the same time (`lab/config-revision: "2"`), because
+`envFrom` does not restart a pod when the referenced Secret changes — without
+the roll the two variables would have stayed in the running container's
+environment even after leaving the Secret.
+
+The matching `admin-email` / `admin-password` properties in OpenBao are removed
+separately by the operator; nothing in Git references them any more.
+
+> Re-seeding a **fresh** instance (empty data PVC) would need them again. Add
+> both back to the `ExternalSecret`, bump `lab/config-revision`, and remove them
+> once the new admin exists.
 
 > `JWT_SECRET` is **not** managed here and must never be set. TREK generates it
 > into `/app/data/.jwt_secret` and rotates it from the admin panel; an env var

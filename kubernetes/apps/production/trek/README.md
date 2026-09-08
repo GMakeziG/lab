@@ -200,17 +200,34 @@ curl -sk https://trek.ninjatronics.io/api/auth/app-config | jq \
      -d '{"username":"regprobe","email":"regprobe@example.invalid","password":"Nv3r-Cr3at3d!"}'
    ```
 
-9. Rotate `admin-password` in OpenBao — the seeded value is printed to the pod
-   log at first boot and therefore reaches Loki.
+9. Remove the bootstrap-only `ADMIN_EMAIL` / `ADMIN_PASSWORD` mappings from
+   `external-secrets/trek-secret.yaml` and bump `lab/config-revision` in the
+   base Deployment so the pod rolls — `envFrom` does not restart a pod when the
+   referenced Secret changes, so without the bump the variables would remain in
+   the running container. Then remove the `admin-email` / `admin-password`
+   properties from OpenBao. **Done** — see *Bootstrap secrets* below.
 
 Only after steps 7 and 8 pass may Phase 2 be considered.
 
-## Follow-up changes already identified
+## Bootstrap secrets — removed
 
-- **Remove `ADMIN_EMAIL` / `ADMIN_PASSWORD`** from
-  `external-secrets/trek-secret.yaml` once bootstrap is complete, then remove
-  the two properties from OpenBao. They are read only when the database has no
-  users and are ignored thereafter. `encryption-key` stays permanently.
+`ADMIN_EMAIL` and `ADMIN_PASSWORD` seeded the first administrator and are read
+only while the database has no users (`server/src/db/seeds.ts:24-33`). Bootstrap
+is complete — the administrator exists, the bootstrap password was changed,
+TOTP is enrolled, and registration is closed and verified — so both mappings
+have been removed from the `ExternalSecret` and the pod rolled.
+
+`ENCRYPTION_KEY` is untouched and remains the only secret TREK consumes at
+runtime. It is permanent and recovery-critical; see the base README.
+
+The generated `trek-secret` therefore now contains exactly one key:
+`ENCRYPTION_KEY`.
+
+Nothing in Git references `admin-email` or `admin-password` any more, so those
+two properties can be deleted from `secret/apps/trek` in OpenBao. Deleting them
+is safe on an initialised instance and is done by the operator, not by Flux.
+
+## Follow-up changes already identified
 - **Phase 2 (not authorized):** Cloudflare Access → Cloudflare Tunnel → Traefik
   → TREK login + TOTP. Requires a `cloudflared` ingress rule, a Cloudflare DNS
   Tunnel record, an Access policy, and removal of the hosts-file line.

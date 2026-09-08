@@ -94,8 +94,69 @@ The two apparent escape hatches do not apply:
   (`server/src/nest/common/managed.ts:126`).
 
 Closing registration is therefore a **mandatory manual post-deployment step**,
-performed by the administrator in the UI. Until it is done and verified, TREK
-must not be exposed publicly.
+performed by the administrator after first boot — partly in the UI and partly
+through the admin API, for the reason in the next section. Until it is done and
+verified, TREK must not be exposed publicly.
+
+### OIDC registration defaults to ENABLED and is hidden in the UI
+
+Closing password registration is **not sufficient**. `oidc_registration` is a
+separate toggle that defaults to enabled, and the admin panel does not show it
+on an instance with no OIDC provider configured.
+
+`server/src/nest/auth/auth.service.ts:170` treats an **absent** `app_settings`
+row as enabled:
+
+```js
+oidc_registration: get('oidc_registration') !== 'false',   // row absent -> true
+```
+
+and the public `allow_registration` flag is derived from both
+(`auth.service.ts:292`):
+
+```js
+allow_registration: isDemo ? false : (toggles.password_registration || toggles.oidc_registration)
+```
+
+so `allow_registration` stays `true` while `oidc_registration` is unset, even
+with password registration switched off.
+
+**The control is not rendered when OIDC is unconfigured.** In
+`client/src/pages/admin/AdminSettingsTab.tsx:86` and `:106`, both the *SSO
+Login* and *SSO Registration* switches are wrapped in `{oidcConfigured && (…)}`.
+With no `OIDC_ISSUER` / `OIDC_CLIENT_ID` this instance reports
+`oidc_configured: false`, so neither switch appears in Admin → Settings and the
+setting cannot be changed from the UI at all. It is still writable through the
+API — `oidc_registration` and `oidc_login` are both in `ADMIN_SETTINGS_KEYS`
+(`server/src/nest/auth/auth.helpers.ts:37`) — via `PUT /api/auth/app-settings`
+as an authenticated administrator.
+
+Both rows have been written explicitly on this instance:
+
+| `app_settings` key | Value | Why |
+| --- | --- | --- |
+| `password_registration` | `"false"` | closes self-service password signup |
+| `oidc_registration` | `"false"` | **required** — the absent-row default is `true` |
+| `oidc_login` | `"false"` | intentionally off until an OIDC provider is deliberately configured |
+
+`password_login` remains enabled and `passkey_login` remains off, both at their
+upstream defaults (rows absent).
+
+> **`oidc_registration` must be `false` before any public exposure**, and it
+> **must be re-checked before configuring an OIDC provider in future.** While no
+> IdP exists the flag is inert — the entry point refuses — so a stale `true`
+> causes no visible symptom and is easy to miss. The day an issuer and client ID
+> are configured, a `true` value means anyone who can authenticate to that IdP
+> can self-register into TREK, silently. Treat verifying it as a precondition of
+> both Phase 2 and any future SSO work.
+
+Verify the whole posture in one call:
+
+```bash
+curl -sk https://trek.ninjatronics.io/api/auth/app-config | jq \
+  '{allow_registration, password_registration, oidc_registration, oidc_login, oidc_configured}'
+# all five must be false
+```
 
 ## Bootstrap sequence
 
@@ -104,18 +165,33 @@ must not be exposed publicly.
    administrator credentials from `secret/apps/trek`.
 3. Change the bootstrap password — TREK forces this
    (`must_change_password=1`).
-4. Admin → Settings: disable **password registration** and **OIDC
-   registration**.
-5. Enable **TOTP MFA** on the administrator account.
-6. Verify:
+4. Admin → Settings: disable **password registration**.
+5. Disable **OIDC registration** (and **OIDC login**). These have no UI control
+   on an instance without an OIDC provider — see *OIDC registration defaults to
+   ENABLED* above — so they must be set through the authenticated admin API.
+   From the browser devtools console on a logged-in TREK tab (the session
+   cookie is `httpOnly`, so the request has to originate from the page):
+
+   ```js
+   await fetch('/api/auth/app-settings', {
+     method: 'PUT',
+     credentials: 'include',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ oidc_registration: false, oidc_login: false })
+   }).then(r => r.json())    // -> {success: true}
+   ```
+
+6. Enable **TOTP MFA** on the administrator account.
+7. Verify:
 
    ```bash
    curl -sk https://trek.ninjatronics.io/api/auth/app-config | jq \
-     '{allow_registration, password_registration, oidc_registration}'
-   # all three must be false
+     '{allow_registration, password_registration, oidc_registration, oidc_login, oidc_configured}'
+   # all five must be false
    ```
 
-7. Negative registration test — must return **403**, not 201:
+8. Negative registration test — must return **403**, not 201, and must not
+   create a user:
 
    ```bash
    curl -sk -o /dev/null -w '%{http_code}\n' \
@@ -124,10 +200,10 @@ must not be exposed publicly.
      -d '{"username":"regprobe","email":"regprobe@example.invalid","password":"Nv3r-Cr3at3d!"}'
    ```
 
-8. Rotate `admin-password` in OpenBao — the seeded value is printed to the pod
+9. Rotate `admin-password` in OpenBao — the seeded value is printed to the pod
    log at first boot and therefore reaches Loki.
 
-Only after steps 6 and 7 pass may Phase 2 be considered.
+Only after steps 7 and 8 pass may Phase 2 be considered.
 
 ## Follow-up changes already identified
 
@@ -138,9 +214,18 @@ Only after steps 6 and 7 pass may Phase 2 be considered.
 - **Phase 2 (not authorized):** Cloudflare Access → Cloudflare Tunnel → Traefik
   → TREK login + TOTP. Requires a `cloudflared` ingress rule, a Cloudflare DNS
   Tunnel record, an Access policy, and removal of the hosts-file line.
+  **Precondition:** re-run the five-flag check above — `allow_registration`,
+  `password_registration`, `oidc_registration`, `oidc_login` and
+  `oidc_configured` must all still be `false`. These live in SQLite on the data
+  PVC, not in Git, so Flux will not restore them if they drift or if the volume
+  is ever restored from an early backup.
   Note Cloudflare's free plan caps request bodies at 100 MB while TREK allows
   500 MB uploads — do backup restores over port-forward, not the public
   hostname.
+- **Future OIDC/SSO work:** before configuring an issuer and client ID, confirm
+  `oidc_registration` is `false`. Configuring an IdP while it is `true` opens
+  self-registration to anyone who can authenticate there, with no visible
+  symptom beforehand.
 - **NetworkPolicy:** worth adding for a workload holding personal documents,
   but it would be this repository's first app NetworkPolicy and belongs in its
   own change.

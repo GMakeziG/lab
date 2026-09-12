@@ -11,7 +11,7 @@ spec:
       # Chart 17.1.5 ships appVersion 15.0.7. Forgejo v15.0 is the current LTS
       # (released 2026-04-16, EOL 2027-07-15). v11.0 LTS went EOL 2026-07-16
       # and v16.0 is not an LTS line.
-      version: 17.1.5
+      version: 17.1.6
       sourceRef:
         kind: HelmRepository
         name: forgejo
@@ -30,7 +30,7 @@ spec:
       repository: forgejo/forgejo
       # Pinned explicitly rather than inheriting the chart appVersion, so a
       # chart bump cannot silently move us off the LTS line.
-      tag: "15.0.7"
+      tag: "15.0.8"
       rootless: true
       pullPolicy: IfNotPresent
 

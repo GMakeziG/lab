@@ -54,7 +54,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: trek
-          image: docker.io/mauriceboe/trek:4.2.1@sha256:777f4d647e973fe7d87fecd957e854b86d57e8d977fd041763e0ca19b3c2e2c0
+          image: docker.io/mauriceboe/trek:4.3.2@sha256:0e6899b9070635a4f08242caa8c926d66cba7a3f9e8fa88c6ad88d09275969d1
           imagePullPolicy: IfNotPresent
           # The image's default CMD cannot run unprivileged. It ends in
           # `exec gosu node node ...`, and gosu calls setgroups()

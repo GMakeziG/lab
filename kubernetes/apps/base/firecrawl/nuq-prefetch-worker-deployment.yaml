@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: nuq-prefetch-worker
-          image: ghcr.io/firecrawl/firecrawl:2.11.137@sha256:d2fe554a1a723d95f3af3ceb4146db5765efaba7fb1b1850f8fd2713b11da7f6
+          image: ghcr.io/firecrawl/firecrawl:2.11.504@sha256:488c173cf5863c210c96dadb6fe8c0e9d5c388d40dd0dfbf1901b36b13f77eaf
           imagePullPolicy: IfNotPresent
           command: ["node"]
           args: ["--max-old-space-size=2048", "dist/src/services/worker/nuq-prefetch-worker.js"]

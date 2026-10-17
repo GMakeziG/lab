@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: worker
-          image: ghcr.io/firecrawl/firecrawl:2.11.137@sha256:d2fe554a1a723d95f3af3ceb4146db5765efaba7fb1b1850f8fd2713b11da7f6
+          image: ghcr.io/firecrawl/firecrawl:2.11.531@sha256:fdf83f5acf690e2f99dbfbbc2407f04c8fe16119434fb2bdeebdf0dc81323a30
           imagePullPolicy: IfNotPresent
           command: ["node"]
           args: ["--max-old-space-size=3072", "dist/src/services/queue-worker.js"]

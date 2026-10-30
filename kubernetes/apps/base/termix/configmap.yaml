@@ -8,13 +8,24 @@ data:
   PORT: "8080"
   DATA_DIR: /app/data
   NODE_ENV: production
-  # Guacamole covers RDP/VNC/Telnet only (src/backend/starter.ts:320). This
-  # deployment uses SSH, SFTP, tunnels and host monitoring, all of which run
-  # through Termix's own SSH backend, so the guacd sidecar is not deployed.
-  # With ENABLE_GUACAMOLE=false the backend skips loading the Guacamole
-  # server entirely. GUACD_HOST/GUACD_PORT are deliberately unset:
-  # src/backend/utils/guacd-config.ts:57 treats that as "no guacd".
-  ENABLE_GUACAMOLE: "false"
+  # Guacamole provides RDP/VNC/Telnet (src/backend/starter.ts:323); SSH, SFTP
+  # and tunnels still run through Termix's own SSH backend. guacd runs as a
+  # sidecar in this pod, bound to loopback only (see deployment.yaml).
+  ENABLE_GUACAMOLE: "true"
+  # Must be a loopback literal. src/backend/hosts/guacamole/jump-tunnel-endpoint.ts
+  # binds the SSH jump-tunnel listener to 127.0.0.1 only when the guacd host is
+  # localhost/127.0.0.1/::1; any other value binds it to 0.0.0.0. "127.0.0.1"
+  # rather than "localhost" because Node may resolve localhost to ::1 while
+  # guacd listens on IPv4. The env vars also take precedence over the guac_url
+  # setting, so guacd cannot be repointed from the UI.
+  # GUACD_TUNNEL_HOST is deliberately unset: it is only read for non-loopback
+  # guacd hosts.
+  GUACD_HOST: "127.0.0.1"
+  GUACD_PORT: "4822"
+  # GUACD_RECORDING_PATH / GUACD_RECORDING_BACKEND_PATH are deliberately unset.
+  # Both default to $DATA_DIR/session_recordings/guacamole
+  # (src/backend/hosts/guacamole/routes.ts:588), and the sidecar mounts exactly
+  # that directory at the same path, so guacd writes where the backend reads.
   # Registration is open by default and the first account registered becomes
   # admin (src/backend/database/routes/users.ts:107). The administrator account
   # exists, so registration is now closed. The env var takes precedence over the

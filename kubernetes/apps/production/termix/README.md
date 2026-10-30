@@ -15,7 +15,9 @@ Cloudflare Access is an **additional** authentication layer in front of
 Termix's own login, never a replacement for it. Trusted proxy authentication
 (`TRUSTED_PROXY_AUTH_ENABLED`) is deliberately not enabled -- upstream's own
 compose file warns against it for anything reachable by untrusted clients.
-Only port 8080 is routed; the backend's 30001-30012 stay on loopback.
+Only port 8080 is routed. The backend's 30001-30012 are not in the Service,
+and the `termix-ingress` NetworkPolicy blocks direct access to them (see
+Security posture).
 
 ## Layout
 
@@ -24,6 +26,7 @@ Only port 8080 is routed; the backend's 30001-30012 stay on loopback.
 | `kubernetes/apps/base/termix/` | ServiceAccount, ConfigMap, PVC, Deployment, Service |
 | `kubernetes/apps/production/termix/external-secrets/` | ExternalSecret backed by OpenBao |
 | `kubernetes/apps/production/termix/ingress.yaml` | Traefik ingress + cert-manager TLS |
+| `kubernetes/apps/production/termix/networkpolicy.yaml` | Ingress allowlist: TCP 8080 from Traefik only |
 | `kubernetes/namespaces/termix.yaml` | Namespace |
 | `kubernetes/infrastructure/base/cloudflared/config.yaml` | Tunnel hostname rule |
 
@@ -102,14 +105,76 @@ Two consequences:
 
 ## Guacamole
 
-Not deployed. `guacd` serves RDP/VNC/Telnet only
-(`src/backend/starter.ts:320`); SSH, SFTP, tunnels and host monitoring all run
-through Termix's own SSH backend. `ENABLE_GUACAMOLE=false` stops the backend
-loading the Guacamole server, and `GUACD_HOST`/`GUACD_PORT` are left unset,
-which `src/backend/utils/guacd-config.ts:57` treats as "no guacd".
+Enabled for RDP/VNC/Telnet (`src/backend/starter.ts:323`). SSH, SFTP, tunnels
+and host monitoring still run through Termix's own SSH backend and do not
+touch guacd. Source references are to the `release-2.7.0-tag` tag.
 
-Re-enabling is additive: a `guacamole/guacd` sidecar, `GUACD_HOST=127.0.0.1`,
-the `GUACD_*` recording paths, and a `GUACAMOLE_ENCRYPTION_KEY` secret.
+- **Sidecar, loopback only.** `guacamole/guacd:1.6.0` runs in the termix pod.
+  The image entrypoint hardcodes `-b 0.0.0.0`, so the container invokes
+  `/opt/guacamole/sbin/guacd -b 127.0.0.1 -l 4822` directly. guacd is not in
+  the Service and is unreachable on the pod IP; probes use `nc -z 127.0.0.1`.
+- **Jump tunnels stay on loopback.** `GUACD_HOST=127.0.0.1` makes
+  `jump-tunnel-endpoint.ts` bind the SSH jump-tunnel listener to `127.0.0.1`.
+  Any non-loopback `GUACD_HOST` would bind it to `0.0.0.0`.
+  `GUACD_TUNNEL_HOST` is unset. The env vars override the in-app `guac_url`
+  setting.
+- **Runtime.** guacd runs as the image's own `guacd` user, uid/gid 1000 (same
+  as Termix), with a read-only root filesystem, no capabilities, and emptyDirs
+  for `/home/guacd` (FreeRDP config/cert store), `/tmp` and `/drive` (RDP drive
+  redirection, `routes.ts:620`; ephemeral).
+- **Recordings.** RDP/Telnet sessions are recorded when session logging is on
+  for the host (VNC is never recorded). Termix sends guacd
+  `recording-path=/app/data/session_recordings/guacamole` (`routes.ts:588`,
+  both `GUACD_RECORDING_*` vars unset) and reads the file from the same path
+  afterwards. guacd mounts only that directory of `termix-data`, via
+  `subPath`, never the database or keys. The `recordings-dir` init container
+  creates it as uid 1000 first, because kubelet would otherwise create a
+  missing subPath non-writable.
+- **No extra secret.** Without `GUACAMOLE_ENCRYPTION_KEY`, the connection-token
+  key is derived from `JWT_SECRET` (`token-service.ts:86`), which already comes
+  from OpenBao.
+- **Network.** guacd connects to RDP/VNC targets from niner, so targets must
+  be reachable from that node. The Guacamole WebSocket (30008) binds all
+  interfaces and is closed off by the `termix-ingress` NetworkPolicy.
+
+### Validation (2026-10-30, after the guacd sidecar and `termix-ingress`)
+
+| Check | Result |
+|---|---|
+| Existing SSH session through `termix.ninjatronics.io` | Passed |
+| Interactive RDP session through `termix.ninjatronics.io` | Passed |
+| Recording creation (RDP) | Passed: guacd writes a valid `.guac` with image frames to `session_recordings/guacamole`, and the backend serves it (`GET /session_logs/:id/content` returns 200) |
+| Recording playback in the UI | **Blocked by an upstream frontend bug** (black panel) |
+
+The recordings themselves are valid. Three separate findings, none caused by
+this deployment:
+
+1. **Constructor crash. Confirmed; this is what blocks playback.**
+   guacamole-common-js **1.5.0** (the latest on npm, bundled by Termix) never
+   assigns a Blob source in `Guacamole.SessionRecording`, so the constructor
+   throws `TypeError: Cannot read properties of undefined (reading 'size')`
+   before the display is attached, leaving a black panel. Confirmed in the
+   deployed bundle (`if(t instanceof Blob)b(r,S,C)`) and with a synthetic
+   recording. Apache fixed it in guacamole-client 1.5.3, but that fix was never
+   published to npm.
+2. **Display scaling race. Reproduced; visible only once (1) is fixed.**
+   The player's `fit()` runs on `onload`, before any frame is drawn (display
+   width 0), and otherwise only on container resize. If play starts after the
+   ResizeObserver's initial callback (the normal case), the display stays at
+   scale 1, and recordings larger than the panel are cropped.
+3. **Retry filename mismatch. Separate; does not affect playback of normal
+   sessions.** Retries that reuse a connection token reuse the recording
+   name. guacd then writes `<name>.guac.1`, `.guac.2`, …, while each
+   session-log row points at the original `<name>.guac`, which may be empty.
+   Retry files and their rows from 2026-10-30 have been left in place
+   intentionally.
+
+Versions checked (2026-10-30): 2.7.0 (deployed), 2.7.1 (same source;
+identical bundled vendor chunk), and 2.9.2, the latest release checked (player
+moved to `plugins/session-recording`, same code). Re-check later releases
+before upgrading for this. Upstream issue:
+<https://github.com/Termix-SSH/Plugin-Session-Recording/issues/6>
+(filed as Termix-SSH/Termix#1747, then transferred to the plugin repository).
 
 ## Security posture
 
@@ -130,8 +195,18 @@ renders the nginx config into `/tmp/nginx` and unconditionally rewrites
 `/app/html/**/sw.js` with `sed -i` on every start. Both live in the image root
 filesystem, not on the data volume, so an emptyDir cannot substitute.
 
-Only port 8080 (nginx) is exposed. The backend listens on 30001-30012 but
-nginx reaches it over loopback, so those stay off the Service.
+Only port 8080 (nginx) is in the Service. nginx reaches the backend over
+loopback, but the backend does **not** bind loopback-only: in 2.7.0 most of
+30001-30011 listen on all interfaces (30012 and guacd's 4822 are loopback).
+Before `termix-ingress` they were reachable from any pod in the cluster,
+bypassing Traefik and Cloudflare Access.
+
+`networkpolicy.yaml` (`termix-ingress`) restricts ingress to the termix pod to
+TCP 8080 from the Traefik pods in `kube-system`. That is the actual TCP peer:
+cloudflared targets the Traefik Service. nginx's access log shows the
+cloudflared IP only because `real_ip` rewrites `$remote_addr` from
+`X-Forwarded-For`. Kubelet probes come from the node and are allowed by the
+k3s kube-router controller. Egress is not restricted.
 
 ### Open hardening items
 
@@ -142,10 +217,9 @@ nginx reaches it over loopback, so those stay off the Service.
   precedence over the in-database `allow_registration` setting, so it cannot be
   re-enabled from the UI without a Git change. Verify with
   `GET /users/registration-allowed`, which must report `{"allowed":false}`.
-- **NetworkPolicy.** Not implemented. Termix's purpose is outbound SSH to
-  arbitrary hosts, so a default-deny egress policy needs real design.
-  "Default-deny ingress except Traefik" is the next hardening step now that the
-  service is publicly routed.
+- **Egress NetworkPolicy.** Not implemented. Ingress is restricted by
+  `termix-ingress`, but Termix's purpose is outbound SSH/RDP/VNC to arbitrary
+  hosts, so a default-deny egress policy needs real design.
 - **Cloudflare Access.** In place for `termix.ninjatronics.io`, in addition to
   Termix's own authentication, because Termix brokers administrative access to
   the homelab. It must stay in front of this hostname.

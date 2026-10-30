@@ -7,3 +7,4 @@ resources:
   - ../../base/termix
   - external-secrets
   - ingress.yaml
+  - networkpolicy.yaml

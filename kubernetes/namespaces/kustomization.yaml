@@ -14,5 +14,4 @@ resources:
   - platform.yaml
   - renovate.yaml
   - termix.yaml
-  - trek.yaml
   - wallabag.yaml

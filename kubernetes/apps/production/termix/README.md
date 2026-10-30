@@ -173,7 +173,8 @@ Versions checked (2026-10-30): 2.7.0 (deployed), 2.7.1 (same source;
 identical bundled vendor chunk), and 2.9.2, the latest release checked (player
 moved to `plugins/session-recording`, same code). Re-check later releases
 before upgrading for this. Upstream issue:
-<https://github.com/Termix-SSH/Termix/issues/1747>.
+<https://github.com/Termix-SSH/Plugin-Session-Recording/issues/6>
+(filed as Termix-SSH/Termix#1747, then transferred to the plugin repository).
 
 ## Security posture
 

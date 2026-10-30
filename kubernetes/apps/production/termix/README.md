@@ -102,14 +102,36 @@ Two consequences:
 
 ## Guacamole
 
-Not deployed. `guacd` serves RDP/VNC/Telnet only
-(`src/backend/starter.ts:320`); SSH, SFTP, tunnels and host monitoring all run
-through Termix's own SSH backend. `ENABLE_GUACAMOLE=false` stops the backend
-loading the Guacamole server, and `GUACD_HOST`/`GUACD_PORT` are left unset,
-which `src/backend/utils/guacd-config.ts:57` treats as "no guacd".
+Enabled for RDP/VNC/Telnet (`src/backend/starter.ts:323`). SSH, SFTP, tunnels
+and host monitoring still run through Termix's own SSH backend and do not
+touch guacd. Source references are to the `release-2.7.0-tag` tag.
 
-Re-enabling is additive: a `guacamole/guacd` sidecar, `GUACD_HOST=127.0.0.1`,
-the `GUACD_*` recording paths, and a `GUACAMOLE_ENCRYPTION_KEY` secret.
+- **Sidecar, loopback only.** `guacamole/guacd:1.6.0` runs in the termix pod.
+  The image entrypoint hardcodes `-b 0.0.0.0`, so the container invokes
+  `/opt/guacamole/sbin/guacd -b 127.0.0.1 -l 4822` directly. guacd is not in
+  the Service and is unreachable on the pod IP; probes use `nc -z 127.0.0.1`.
+- **Jump tunnels stay on loopback.** `GUACD_HOST=127.0.0.1` makes
+  `jump-tunnel-endpoint.ts` bind the SSH jump-tunnel listener to `127.0.0.1`.
+  Any non-loopback `GUACD_HOST` would bind it to `0.0.0.0`.
+  `GUACD_TUNNEL_HOST` is unset. The env vars override the in-app `guac_url`
+  setting.
+- **Runtime.** guacd runs as the image's own `guacd` user, uid/gid 1000 (same
+  as Termix), with a read-only root filesystem, no capabilities, and emptyDirs
+  for `/home/guacd` (FreeRDP config/cert store), `/tmp` and `/drive` (RDP drive
+  redirection, `routes.ts:620`; ephemeral).
+- **Recordings.** RDP/Telnet sessions are recorded when session logging is on
+  for the host (VNC is never recorded). Termix sends guacd
+  `recording-path=/app/data/session_recordings/guacamole` (`routes.ts:588`,
+  both `GUACD_RECORDING_*` vars unset) and reads the file from the same path
+  afterwards. guacd mounts only that directory of `termix-data`, via
+  `subPath`, never the database or keys. The `recordings-dir` init container
+  creates it as uid 1000 first, because kubelet would otherwise create a
+  missing subPath non-writable.
+- **No extra secret.** Without `GUACAMOLE_ENCRYPTION_KEY`, the connection-token
+  key is derived from `JWT_SECRET` (`token-service.ts:86`), which already comes
+  from OpenBao.
+- **Network.** guacd connects to RDP/VNC targets from niner, so targets must
+  be reachable from that node. There are no NetworkPolicies in `termix`.
 
 ## Security posture
 

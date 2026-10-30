@@ -22,7 +22,7 @@ spec:
         # imperative `kubectl rollout restart` is reverted by Flux on its next
         # reconcile. Bump this whenever configmap.yaml changes so the new
         # environment is picked up declaratively.
-        lab/config-revision: "2"
+        lab/config-revision: "3"
     spec:
       serviceAccountName: termix
       automountServiceAccountToken: false
@@ -36,6 +36,30 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        # guacd only sees the recordings directory, mounted via subPath. If
+        # that directory does not exist kubelet creates it non-writable for
+        # uid 1000, so create it here first, as uid 1000, on the full volume.
+        - name: recordings-dir
+          image: ghcr.io/lukegus/termix:release-2.7.0@sha256:be6080b9d4b282984bd9ffc280d1d9fd30b22539adb33853c44d783343c83d33
+          imagePullPolicy: IfNotPresent
+          command: ["mkdir", "-p", "/app/data/session_recordings/guacamole"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
       containers:
         - name: termix
           image: ghcr.io/lukegus/termix:release-2.7.0@sha256:be6080b9d4b282984bd9ffc280d1d9fd30b22539adb33853c44d783343c83d33
@@ -95,7 +119,66 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /app/data
+        # Remote-desktop proxy for RDP/VNC/Telnet. Runs as the image's own
+        # guacd user (uid/gid 1000, same as Termix). The image entrypoint
+        # hardcodes `-b 0.0.0.0`, so guacd is invoked directly to keep it
+        # loopback-only: only the termix container in this pod can reach it.
+        - name: guacd
+          image: guacamole/guacd:1.6.0@sha256:8974eaa9ba32f713daf311e7cc8cd7e4cdfba1edea39eed75524e78ef4b08f4f
+          imagePullPolicy: IfNotPresent
+          command: ["/opt/guacamole/sbin/guacd"]
+          args: ["-f", "-b", "127.0.0.1", "-l", "4822", "-L", "info"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          # Loopback-only, so a tcpSocket probe (which targets the pod IP)
+          # would always fail. nc is the check the image's own HEALTHCHECK uses.
+          readinessProbe:
+            exec:
+              command: ["nc", "-z", "127.0.0.1", "4822"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["nc", "-z", "127.0.0.1", "4822"]
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            # Only the recordings directory, at the path Termix passes to
+            # guacd as recording-path; never the database or keys.
+            - name: data
+              mountPath: /app/data/session_recordings/guacamole
+              subPath: session_recordings/guacamole
+            # FreeRDP keeps its config and certificate store under $HOME.
+            - name: guacd-home
+              mountPath: /home/guacd
+            - name: guacd-tmp
+              mountPath: /tmp
+            # Termix sets drive-path=/drive for RDP hosts with drive
+            # redirection enabled (routes.ts:620). Ephemeral by design.
+            - name: guacd-drive
+              mountPath: /drive
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: termix-data
+        - name: guacd-home
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: guacd-tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: guacd-drive
+          emptyDir:
+            sizeLimit: 1Gi

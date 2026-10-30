@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: cloudflared
-          image: cloudflare/cloudflared:2026.8.2@sha256:0aa26e284f05e6c77ae375b8c9c11d9eb6a448fb7bcd8d40f31cb6176189eb38
+          image: cloudflare/cloudflared:2026.10.6@sha256:004d843fa5fdc3103983fd580ee19fab4a8fa98add31f87249c1659e848c98e0
           args:
             - tunnel
             - --config

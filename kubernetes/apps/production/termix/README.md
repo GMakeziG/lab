@@ -137,6 +137,44 @@ touch guacd. Source references are to the `release-2.7.0-tag` tag.
   be reachable from that node. The Guacamole WebSocket (30008) binds all
   interfaces and is closed off by the `termix-ingress` NetworkPolicy.
 
+### Validation (2026-10-30, after the guacd sidecar and `termix-ingress`)
+
+| Check | Result |
+|---|---|
+| Existing SSH session through `termix.ninjatronics.io` | Passed |
+| Interactive RDP session through `termix.ninjatronics.io` | Passed |
+| Recording creation (RDP) | Passed: guacd writes a valid `.guac` with image frames to `session_recordings/guacamole`, and the backend serves it (`GET /session_logs/:id/content` returns 200) |
+| Recording playback in the UI | **Blocked by an upstream frontend bug** (black panel) |
+
+The recordings themselves are valid. Three separate findings, none caused by
+this deployment:
+
+1. **Constructor crash. Confirmed; this is what blocks playback.**
+   guacamole-common-js **1.5.0** (the latest on npm, bundled by Termix) never
+   assigns a Blob source in `Guacamole.SessionRecording`, so the constructor
+   throws `TypeError: Cannot read properties of undefined (reading 'size')`
+   before the display is attached, leaving a black panel. Confirmed in the
+   deployed bundle (`if(t instanceof Blob)b(r,S,C)`) and with a synthetic
+   recording. Apache fixed it in guacamole-client 1.5.3, but that fix was never
+   published to npm.
+2. **Display scaling race. Reproduced; visible only once (1) is fixed.**
+   The player's `fit()` runs on `onload`, before any frame is drawn (display
+   width 0), and otherwise only on container resize. If play starts after the
+   ResizeObserver's initial callback (the normal case), the display stays at
+   scale 1, and recordings larger than the panel are cropped.
+3. **Retry filename mismatch. Separate; does not affect playback of normal
+   sessions.** Retries that reuse a connection token reuse the recording
+   name. guacd then writes `<name>.guac.1`, `.guac.2`, …, while each
+   session-log row points at the original `<name>.guac`, which may be empty.
+   Retry files and their rows from 2026-10-30 have been left in place
+   intentionally.
+
+Versions checked (2026-10-30): 2.7.0 (deployed), 2.7.1 (same source;
+identical bundled vendor chunk), and 2.9.2, the latest release checked (player
+moved to `plugins/session-recording`, same code). Re-check later releases
+before upgrading for this. Upstream issue:
+<https://github.com/Termix-SSH/Termix/issues/1747>.
+
 ## Security posture
 
 Non-root (uid/gid 1000), `runAsNonRoot`, `fsGroup: 1000`,

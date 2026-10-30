@@ -15,7 +15,9 @@ Cloudflare Access is an **additional** authentication layer in front of
 Termix's own login, never a replacement for it. Trusted proxy authentication
 (`TRUSTED_PROXY_AUTH_ENABLED`) is deliberately not enabled -- upstream's own
 compose file warns against it for anything reachable by untrusted clients.
-Only port 8080 is routed; the backend's 30001-30012 stay on loopback.
+Only port 8080 is routed. The backend's 30001-30012 are not in the Service,
+and the `termix-ingress` NetworkPolicy blocks direct access to them (see
+Security posture).
 
 ## Layout
 
@@ -24,6 +26,7 @@ Only port 8080 is routed; the backend's 30001-30012 stay on loopback.
 | `kubernetes/apps/base/termix/` | ServiceAccount, ConfigMap, PVC, Deployment, Service |
 | `kubernetes/apps/production/termix/external-secrets/` | ExternalSecret backed by OpenBao |
 | `kubernetes/apps/production/termix/ingress.yaml` | Traefik ingress + cert-manager TLS |
+| `kubernetes/apps/production/termix/networkpolicy.yaml` | Ingress allowlist: TCP 8080 from Traefik only |
 | `kubernetes/namespaces/termix.yaml` | Namespace |
 | `kubernetes/infrastructure/base/cloudflared/config.yaml` | Tunnel hostname rule |
 
@@ -131,7 +134,8 @@ touch guacd. Source references are to the `release-2.7.0-tag` tag.
   key is derived from `JWT_SECRET` (`token-service.ts:86`), which already comes
   from OpenBao.
 - **Network.** guacd connects to RDP/VNC targets from niner, so targets must
-  be reachable from that node. There are no NetworkPolicies in `termix`.
+  be reachable from that node. The Guacamole WebSocket (30008) binds all
+  interfaces and is closed off by the `termix-ingress` NetworkPolicy.
 
 ## Security posture
 
@@ -152,8 +156,18 @@ renders the nginx config into `/tmp/nginx` and unconditionally rewrites
 `/app/html/**/sw.js` with `sed -i` on every start. Both live in the image root
 filesystem, not on the data volume, so an emptyDir cannot substitute.
 
-Only port 8080 (nginx) is exposed. The backend listens on 30001-30012 but
-nginx reaches it over loopback, so those stay off the Service.
+Only port 8080 (nginx) is in the Service. nginx reaches the backend over
+loopback, but the backend does **not** bind loopback-only: in 2.7.0 most of
+30001-30011 listen on all interfaces (30012 and guacd's 4822 are loopback).
+Before `termix-ingress` they were reachable from any pod in the cluster,
+bypassing Traefik and Cloudflare Access.
+
+`networkpolicy.yaml` (`termix-ingress`) restricts ingress to the termix pod to
+TCP 8080 from the Traefik pods in `kube-system`. That is the actual TCP peer:
+cloudflared targets the Traefik Service. nginx's access log shows the
+cloudflared IP only because `real_ip` rewrites `$remote_addr` from
+`X-Forwarded-For`. Kubelet probes come from the node and are allowed by the
+k3s kube-router controller. Egress is not restricted.
 
 ### Open hardening items
 
@@ -164,10 +178,9 @@ nginx reaches it over loopback, so those stay off the Service.
   precedence over the in-database `allow_registration` setting, so it cannot be
   re-enabled from the UI without a Git change. Verify with
   `GET /users/registration-allowed`, which must report `{"allowed":false}`.
-- **NetworkPolicy.** Not implemented. Termix's purpose is outbound SSH to
-  arbitrary hosts, so a default-deny egress policy needs real design.
-  "Default-deny ingress except Traefik" is the next hardening step now that the
-  service is publicly routed.
+- **Egress NetworkPolicy.** Not implemented. Ingress is restricted by
+  `termix-ingress`, but Termix's purpose is outbound SSH/RDP/VNC to arbitrary
+  hosts, so a default-deny egress policy needs real design.
 - **Cloudflare Access.** In place for `termix.ninjatronics.io`, in addition to
   Termix's own authentication, because Termix brokers administrative access to
   the homelab. It must stay in front of this hostname.

@@ -86,8 +86,9 @@ spec:
               containerPort: 8080
               protocol: TCP
           # /health is served by nginx on 8080 and proxied to the backend on
-          # loopback 30001. The backend ports (30001-30012) stay loopback-only
-          # and are deliberately not exposed by the Service.
+          # loopback 30001. The backend ports (30001-30012) are not in the
+          # Service, but most bind all interfaces, not loopback; the
+          # production NetworkPolicy blocks direct access to them.
           startupProbe:
             httpGet:
               path: /health

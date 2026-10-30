@@ -1,0 +1,40 @@
+# Ingress-only allowlist for the termix pod. Egress is deliberately not
+# restricted (no Egress in policyTypes): Termix's purpose is outbound SSH,
+# RDP and VNC to arbitrary hosts.
+#
+# The backend binds most of 30001-30011 on all interfaces, including the
+# Guacamole WebSocket on 30008 (guacamole-server.ts passes only { port }), so
+# without this policy any pod in the cluster can reach them directly,
+# bypassing Traefik and Cloudflare Access. Only nginx on 8080 needs to be
+# reachable from outside the pod; nginx itself reaches the backend over
+# loopback, which NetworkPolicy does not filter.
+#
+# The only in-cluster client is Traefik. cloudflared sends termix traffic to
+# the Traefik Service, and the TCP peer on 8080 is the Traefik pod. nginx's
+# access log shows the cloudflared IP instead, because real_ip rewrites
+# $remote_addr from X-Forwarded-For, so do not use it to choose sources.
+#
+# Kubelet probes come from the node (cni0 gateway) and are permitted by the
+# k3s kube-router policy controller without an explicit rule.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: termix-ingress
+  namespace: termix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: termix
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080

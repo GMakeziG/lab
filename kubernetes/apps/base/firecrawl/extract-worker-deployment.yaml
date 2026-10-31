@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: extract-worker
-          image: ghcr.io/firecrawl/firecrawl:2.11.631@sha256:d56bf1b296d26a92346041d515b4e02997c3f1188ebb141b3e37197bb4aa7623
+          image: ghcr.io/firecrawl/firecrawl:2.11.642@sha256:6e635de5fef19d3591fbd1081a5ee1394dfe71ef19e108305e74600ecc7fa4b2
           imagePullPolicy: IfNotPresent
           command: ["node"]
           args: ["--max-old-space-size=3072", "dist/src/services/extract-worker.js"]

@@ -26,7 +26,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: nuq-postgres-init
-          image: ghcr.io/firecrawl/nuq-postgres:linux-amd64@sha256:4ca6718b2cef40404b046db5cd37ae45db3e44d1a5750c80522f3587a5b193d5
+          image: ghcr.io/firecrawl/nuq-postgres:linux-amd64@sha256:5a0be88215431b8dd57ae5d701ee191521cd1ac8e882a65558ae95c4587c57cb
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

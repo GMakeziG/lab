@@ -1,4 +1,4 @@
-FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS extract
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS extract
 
 ARG CALIBRE_VERSION=9.14.0
 ARG CALIBRE_SHA256=7f53a0863ed6d32407bc72053b966e39d5b64813f2592bd9c741504c01c0e7f3
@@ -30,7 +30,7 @@ RUN apt-get update \
       /opt/calibre/plugins/wayland-shell-integration \
       /opt/calibre/plugins/xcbglintegrations
 
-FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 
 # QtGui imports the GLVND EGL ABI even with the offscreen backend. Extract only
 # that ABI library, avoiding libegl1's Mesa/X11/Wayland provider tree.

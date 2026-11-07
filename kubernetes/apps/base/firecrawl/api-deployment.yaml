@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 180
       containers:
         - name: api
-          image: ghcr.io/firecrawl/firecrawl:2.11.631@sha256:d56bf1b296d26a92346041d515b4e02997c3f1188ebb141b3e37197bb4aa7623
+          image: ghcr.io/firecrawl/firecrawl:2.11.701@sha256:3fe1263dbf79984af344475fb075c0a557e9c529146bd2619a3af6bea0f28904
           imagePullPolicy: IfNotPresent
           command: ["node"]
           args: ["--max-old-space-size=6144", "dist/src/index.js"]

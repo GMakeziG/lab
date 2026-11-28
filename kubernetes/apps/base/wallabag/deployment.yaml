@@ -26,7 +26,7 @@ spec:
         - name: wallabag
           # Pinned to a specific stable release + digest (verified via docker inspect).
           # 2.6.14 is the latest stable release (October 2025).
-          image: wallabag/wallabag:2.6.15@sha256:d54d48f58503505192c8c283f575d7b90e116ae43ec90e54afadf7d279bfe106
+          image: wallabag/wallabag:2.6.19@sha256:957dd984804462367132482c37d7bd1512cabe8a9503ec22e06efddc2872942b
           imagePullPolicy: IfNotPresent
           # The Wallabag image runs as root for s6-svscan + nginx port-80 binding.
           # allowPrivilegeEscalation is disabled; runAsNonRoot and capabilities.drop
